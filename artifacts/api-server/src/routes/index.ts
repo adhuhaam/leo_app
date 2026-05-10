@@ -8,6 +8,7 @@ import expenseCategoriesRouter from "./expense-categories";
 import expensesRouter from "./expenses";
 import loaRouter from "./loa";
 import loaOptionsRouter from "./loa-options";
+import billingRouter from "./billing";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(expenseCategoriesRouter);
 router.use(expensesRouter);
 router.use(loaRouter);
 router.use(loaOptionsRouter);
+router.use(billingRouter);
 
 export default router;

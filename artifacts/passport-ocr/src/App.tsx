@@ -11,6 +11,8 @@ import MasterListPage from "@/pages/master-list";
 import ClientsPage from "@/pages/clients";
 import LoaPage from "@/pages/loa";
 import ExpensesPage from "@/pages/expenses";
+import BillingPage from "@/pages/billing";
+import BillingPrintPage from "@/pages/billing-print";
 import SettingsPage from "@/pages/settings";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ function Router() {
           <Route path="/clients" component={ClientsPage} />
           <Route path="/loa" component={LoaPage} />
           <Route path="/expenses" component={ExpensesPage} />
+          <Route path="/billing" component={BillingPage} />
+          <Route path="/billing/:id/print" component={BillingPrintPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route component={NotFound} />
         </Switch>

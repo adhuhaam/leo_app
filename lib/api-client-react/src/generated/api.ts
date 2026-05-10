@@ -17,6 +17,11 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  BillingDocument,
+  BillingDocumentCreated,
+  BillingDocumentInput,
+  BillingDocumentSummary,
+  BillingDocumentUpdate,
   Client,
   ClientInput,
   ClientUpdate,
@@ -31,6 +36,7 @@ import type {
   ExpenseUpdate,
   GetAuthStatus200,
   HealthStatus,
+  ListBillingDocumentsParams,
   ListClientsParams,
   ListCompaniesParams,
   ListExpensesParams,
@@ -2669,6 +2675,453 @@ export const useDeleteExpense = <
   TContext
 > => {
   return useMutation(getDeleteExpenseMutationOptions(options));
+};
+
+/**
+ * @summary List invoices and quotations
+ */
+export const getListBillingDocumentsUrl = (
+  params?: ListBillingDocumentsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/billing/documents?${stringifiedParams}`
+    : `/api/billing/documents`;
+};
+
+export const listBillingDocuments = async (
+  params?: ListBillingDocumentsParams,
+  options?: RequestInit,
+): Promise<BillingDocumentSummary[]> => {
+  return customFetch<BillingDocumentSummary[]>(
+    getListBillingDocumentsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListBillingDocumentsQueryKey = (
+  params?: ListBillingDocumentsParams,
+) => {
+  return [`/api/billing/documents`, ...(params ? [params] : [])] as const;
+};
+
+export const getListBillingDocumentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBillingDocuments>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListBillingDocumentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listBillingDocuments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListBillingDocumentsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listBillingDocuments>>
+  > = ({ signal }) =>
+    listBillingDocuments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBillingDocuments>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBillingDocumentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBillingDocuments>>
+>;
+export type ListBillingDocumentsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List invoices and quotations
+ */
+
+export function useListBillingDocuments<
+  TData = Awaited<ReturnType<typeof listBillingDocuments>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListBillingDocumentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listBillingDocuments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBillingDocumentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create an invoice or quotation
+ */
+export const getCreateBillingDocumentUrl = () => {
+  return `/api/billing/documents`;
+};
+
+export const createBillingDocument = async (
+  billingDocumentInput: BillingDocumentInput,
+  options?: RequestInit,
+): Promise<BillingDocumentCreated> => {
+  return customFetch<BillingDocumentCreated>(getCreateBillingDocumentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(billingDocumentInput),
+  });
+};
+
+export const getCreateBillingDocumentMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBillingDocument>>,
+    TError,
+    { data: BodyType<BillingDocumentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBillingDocument>>,
+  TError,
+  { data: BodyType<BillingDocumentInput> },
+  TContext
+> => {
+  const mutationKey = ["createBillingDocument"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBillingDocument>>,
+    { data: BodyType<BillingDocumentInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBillingDocument(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBillingDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBillingDocument>>
+>;
+export type CreateBillingDocumentMutationBody = BodyType<BillingDocumentInput>;
+export type CreateBillingDocumentMutationError = ErrorType<void>;
+
+/**
+ * @summary Create an invoice or quotation
+ */
+export const useCreateBillingDocument = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBillingDocument>>,
+    TError,
+    { data: BodyType<BillingDocumentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createBillingDocument>>,
+  TError,
+  { data: BodyType<BillingDocumentInput> },
+  TContext
+> => {
+  return useMutation(getCreateBillingDocumentMutationOptions(options));
+};
+
+/**
+ * @summary Get an invoice or quotation with line items
+ */
+export const getGetBillingDocumentUrl = (id: number) => {
+  return `/api/billing/documents/${id}`;
+};
+
+export const getBillingDocument = async (
+  id: number,
+  options?: RequestInit,
+): Promise<BillingDocument> => {
+  return customFetch<BillingDocument>(getGetBillingDocumentUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBillingDocumentQueryKey = (id: number) => {
+  return [`/api/billing/documents/${id}`] as const;
+};
+
+export const getGetBillingDocumentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBillingDocument>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBillingDocument>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBillingDocumentQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getBillingDocument>>
+  > = ({ signal }) => getBillingDocument(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBillingDocument>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBillingDocumentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBillingDocument>>
+>;
+export type GetBillingDocumentQueryError = ErrorType<void>;
+
+/**
+ * @summary Get an invoice or quotation with line items
+ */
+
+export function useGetBillingDocument<
+  TData = Awaited<ReturnType<typeof getBillingDocument>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBillingDocument>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBillingDocumentQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update an invoice or quotation
+ */
+export const getUpdateBillingDocumentUrl = (id: number) => {
+  return `/api/billing/documents/${id}`;
+};
+
+export const updateBillingDocument = async (
+  id: number,
+  billingDocumentUpdate: BillingDocumentUpdate,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getUpdateBillingDocumentUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(billingDocumentUpdate),
+  });
+};
+
+export const getUpdateBillingDocumentMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBillingDocument>>,
+    TError,
+    { id: number; data: BodyType<BillingDocumentUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateBillingDocument>>,
+  TError,
+  { id: number; data: BodyType<BillingDocumentUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updateBillingDocument"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateBillingDocument>>,
+    { id: number; data: BodyType<BillingDocumentUpdate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateBillingDocument(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateBillingDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateBillingDocument>>
+>;
+export type UpdateBillingDocumentMutationBody = BodyType<BillingDocumentUpdate>;
+export type UpdateBillingDocumentMutationError = ErrorType<void>;
+
+/**
+ * @summary Update an invoice or quotation
+ */
+export const useUpdateBillingDocument = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBillingDocument>>,
+    TError,
+    { id: number; data: BodyType<BillingDocumentUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateBillingDocument>>,
+  TError,
+  { id: number; data: BodyType<BillingDocumentUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdateBillingDocumentMutationOptions(options));
+};
+
+/**
+ * @summary Delete an invoice or quotation
+ */
+export const getDeleteBillingDocumentUrl = (id: number) => {
+  return `/api/billing/documents/${id}`;
+};
+
+export const deleteBillingDocument = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteBillingDocumentUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteBillingDocumentMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBillingDocument>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteBillingDocument>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteBillingDocument"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteBillingDocument>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteBillingDocument(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteBillingDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteBillingDocument>>
+>;
+
+export type DeleteBillingDocumentMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete an invoice or quotation
+ */
+export const useDeleteBillingDocument = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBillingDocument>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteBillingDocument>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteBillingDocumentMutationOptions(options));
 };
 
 /**

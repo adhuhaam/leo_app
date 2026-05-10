@@ -24,3 +24,4 @@ export * from "./loa-options";
 export * from "./clients";
 export * from "./expense-categories";
 export * from "./expenses";
+export * from "./billing";

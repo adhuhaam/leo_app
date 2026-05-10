@@ -1,0 +1,440 @@
+import { Router, type IRouter } from "express";
+import { eq, desc, and, sql, type SQL } from "drizzle-orm";
+import {
+  db,
+  billingDocumentsTable,
+  billingItemsTable,
+  companiesTable,
+} from "@workspace/db";
+import {
+  CreateBillingDocumentBody,
+  UpdateBillingDocumentParams,
+  UpdateBillingDocumentBody,
+  DeleteBillingDocumentParams,
+  GetBillingDocumentParams,
+  ListBillingDocumentsQueryParams,
+} from "@workspace/api-zod";
+
+const router: IRouter = Router();
+
+// Money column precision must match the DB schema in lib/db/src/schema/billing.ts:
+//  - amount       numeric(14,2) → 12 integer digits, 2 decimals
+//  - qty / rate   numeric(14,4) → 10 integer digits, 4 decimals
+//  - gst_rate     numeric(5,2)  → 3 integer digits,  2 decimals (max 999.99)
+// Pass `maxIntegerDigits` so over-large numbers fail with a 400 instead of a 500
+// at insert time.
+function normalizeMoney(
+  input: string | number | null | undefined,
+  scale: 2 | 4 = 2,
+  maxIntegerDigits = 12,
+): string | null {
+  if (input == null) return null;
+  const s = String(input).replace(/,/g, "").trim();
+  if (!s) return null;
+  const re = scale === 4 ? /^(\d+)(?:\.(\d{1,4}))?$/ : /^(\d+)(?:\.(\d{1,2}))?$/;
+  const m = re.exec(s);
+  if (!m) return null;
+  const intPart = m[1].replace(/^0+(?=\d)/, "");
+  if ((intPart || "0").length > maxIntegerDigits) return null;
+  const num = Number(s);
+  if (!Number.isFinite(num) || num < 0) return null;
+  return num.toFixed(scale);
+}
+
+function normalizeDate(input: string | null | undefined): string | null | "invalid" {
+  if (input == null) return null;
+  const t = input.trim();
+  if (!t) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
+  if (!m) return "invalid";
+  const [, ys, ms, ds] = m;
+  const y = Number(ys), mo = Number(ms), d = Number(ds);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) {
+    return "invalid";
+  }
+  return t;
+}
+
+function pad(n: number, width = 6): string {
+  return String(n).padStart(width, "0");
+}
+
+// Allocate the next number for a kind. Looks at the max existing number with
+// the matching prefix and increments. Concurrency note: we run this inside the
+// same transaction as the insert so a unique-index violation will roll back.
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+async function allocateNumber(kind: "invoice" | "quotation", tx: Tx): Promise<string> {
+  const prefix = kind === "invoice" ? "INV-" : "QT-";
+  const rows = await tx
+    .select({ number: billingDocumentsTable.number })
+    .from(billingDocumentsTable)
+    .where(eq(billingDocumentsTable.kind, kind));
+  let max = 0;
+  for (const r of rows) {
+    const m = new RegExp(`^${prefix}(\\d+)$`).exec(r.number);
+    if (m) {
+      const n = Number(m[1]);
+      if (n > max) max = n;
+    }
+  }
+  return `${prefix}${pad(max + 1)}`;
+}
+
+router.get("/billing/documents", async (req, res): Promise<void> => {
+  const parsed = ListBillingDocumentsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { kind, search } = parsed.data;
+  const conds: SQL[] = [];
+  if (kind) conds.push(eq(billingDocumentsTable.kind, kind));
+  const where = conds.length ? and(...conds) : undefined;
+
+  const rows = await db
+    .select({
+      id: billingDocumentsTable.id,
+      kind: billingDocumentsTable.kind,
+      number: billingDocumentsTable.number,
+      companyId: billingDocumentsTable.companyId,
+      companyName: companiesTable.name,
+      customerName: billingDocumentsTable.customerName,
+      customerAddress: billingDocumentsTable.customerAddress,
+      customerTin: billingDocumentsTable.customerTin,
+      issueDate: billingDocumentsTable.issueDate,
+      dueDate: billingDocumentsTable.dueDate,
+      terms: billingDocumentsTable.terms,
+      gstRate: billingDocumentsTable.gstRate,
+      gstInclusive: billingDocumentsTable.gstInclusive,
+      notes: billingDocumentsTable.notes,
+      status: billingDocumentsTable.status,
+      createdAt: billingDocumentsTable.createdAt,
+      updatedAt: billingDocumentsTable.updatedAt,
+    })
+    .from(billingDocumentsTable)
+    .innerJoin(companiesTable, eq(billingDocumentsTable.companyId, companiesTable.id))
+    .where(where)
+    .orderBy(desc(billingDocumentsTable.createdAt));
+
+  // Compute totals per row from item amounts so the listing can show them
+  // without N+1 round-trips. One join is fine for small volumes.
+  const totalsMap = new Map<number, string>();
+  if (rows.length > 0) {
+    const totalsRows = await db
+      .select({
+        documentId: billingItemsTable.documentId,
+        total: sql<string>`COALESCE(SUM(${billingItemsTable.amount}), 0)::text`,
+      })
+      .from(billingItemsTable)
+      .groupBy(billingItemsTable.documentId);
+    for (const t of totalsRows) totalsMap.set(t.documentId, t.total);
+  }
+
+  const result = rows.map((r) => ({
+    ...r,
+    subtotal: totalsMap.get(r.id) ?? "0",
+  }));
+
+  const filtered = search
+    ? result.filter((r) => {
+        const q = search.toLowerCase();
+        return (
+          r.number.toLowerCase().includes(q) ||
+          r.customerName.toLowerCase().includes(q) ||
+          r.companyName.toLowerCase().includes(q)
+        );
+      })
+    : result;
+  res.json(filtered);
+});
+
+router.get("/billing/documents/:id", async (req, res): Promise<void> => {
+  const parsed = GetBillingDocumentParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { id } = parsed.data;
+  const docRows = await db
+    .select({
+      id: billingDocumentsTable.id,
+      kind: billingDocumentsTable.kind,
+      number: billingDocumentsTable.number,
+      companyId: billingDocumentsTable.companyId,
+      companyName: companiesTable.name,
+      customerName: billingDocumentsTable.customerName,
+      customerAddress: billingDocumentsTable.customerAddress,
+      customerTin: billingDocumentsTable.customerTin,
+      issueDate: billingDocumentsTable.issueDate,
+      dueDate: billingDocumentsTable.dueDate,
+      terms: billingDocumentsTable.terms,
+      gstRate: billingDocumentsTable.gstRate,
+      gstInclusive: billingDocumentsTable.gstInclusive,
+      notes: billingDocumentsTable.notes,
+      status: billingDocumentsTable.status,
+      createdAt: billingDocumentsTable.createdAt,
+      updatedAt: billingDocumentsTable.updatedAt,
+    })
+    .from(billingDocumentsTable)
+    .innerJoin(companiesTable, eq(billingDocumentsTable.companyId, companiesTable.id))
+    .where(eq(billingDocumentsTable.id, id))
+    .limit(1);
+  if (docRows.length === 0) {
+    res.status(404).json({ error: "Document not found" });
+    return;
+  }
+  const items = await db
+    .select()
+    .from(billingItemsTable)
+    .where(eq(billingItemsTable.documentId, id))
+    .orderBy(billingItemsTable.position, billingItemsTable.id);
+  res.json({ ...docRows[0], items });
+});
+
+router.post("/billing/documents", async (req, res): Promise<void> => {
+  const parsed = CreateBillingDocumentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const data = parsed.data;
+  if (data.kind !== "invoice" && data.kind !== "quotation") {
+    res.status(400).json({ error: "Invalid kind" });
+    return;
+  }
+  const issue = normalizeDate(data.issueDate);
+  if (issue === "invalid" || issue == null) {
+    res.status(400).json({ error: "Invalid issueDate" });
+    return;
+  }
+  const due = normalizeDate(data.dueDate);
+  if (due === "invalid") {
+    res.status(400).json({ error: "Invalid dueDate" });
+    return;
+  }
+  const gstRate = normalizeMoney(data.gstRate ?? "0", 2, 3);
+  if (gstRate == null) {
+    res.status(400).json({ error: "Invalid gstRate" });
+    return;
+  }
+  // Validate items
+  const normalizedItems: { position: number; description: string; detail: string | null; qty: string; rate: string; amount: string }[] = [];
+  if (!Array.isArray(data.items) || data.items.length === 0) {
+    res.status(400).json({ error: "At least one line item is required" });
+    return;
+  }
+  for (let i = 0; i < data.items.length; i++) {
+    const it = data.items[i];
+    const desc = (it.description ?? "").trim();
+    if (!desc) {
+      res.status(400).json({ error: `Item ${i + 1}: description is required` });
+      return;
+    }
+    const qty = normalizeMoney(it.qty ?? "1", 4, 10);
+    const rate = normalizeMoney(it.rate ?? "0", 4, 10);
+    if (qty == null || rate == null) {
+      res.status(400).json({ error: `Item ${i + 1}: invalid qty or rate` });
+      return;
+    }
+    const lineAmount = (Number(qty) * Number(rate)).toFixed(2);
+    normalizedItems.push({
+      position: i,
+      description: desc,
+      detail: it.detail?.trim() || null,
+      qty,
+      rate,
+      amount: lineAmount,
+    });
+  }
+
+  // Numbering is computed as max+1 inside the transaction. Two concurrent
+  // creates for the same kind can race and both compute the same next number;
+  // the kind+number unique index then rejects one of them with code 23505.
+  // Retry a small number of times so callers never see that as a 500.
+  const MAX_ATTEMPTS = 5;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const number = await allocateNumber(data.kind as "invoice" | "quotation", tx);
+        const inserted = await tx
+          .insert(billingDocumentsTable)
+          .values({
+            kind: data.kind,
+            number,
+            companyId: data.companyId,
+            customerName: data.customerName.trim(),
+            customerAddress: data.customerAddress?.trim() || null,
+            customerTin: data.customerTin?.trim() || null,
+            issueDate: issue,
+            dueDate: due,
+            terms: data.terms?.trim() || null,
+            gstRate,
+            gstInclusive: data.gstInclusive ?? true,
+            notes: data.notes?.trim() || null,
+            status: data.status ?? "draft",
+          })
+          .returning();
+        const doc = inserted[0];
+        await tx.insert(billingItemsTable).values(
+          normalizedItems.map((it) => ({ ...it, documentId: doc.id })),
+        );
+        return doc;
+      });
+      res.status(201).json({ id: result.id });
+      return;
+    } catch (err) {
+      lastErr = err;
+      const code = (err as { code?: string })?.code;
+      // 23505 = unique_violation; only retry that, fail fast on anything else.
+      if (code !== "23505") break;
+      req.log.warn(
+        { attempt, kind: data.kind },
+        "Billing number collision, retrying allocation",
+      );
+    }
+  }
+  req.log.error({ err: lastErr }, "Failed to create billing document");
+  res.status(500).json({ error: "Failed to create document" });
+});
+
+router.patch("/billing/documents/:id", async (req, res): Promise<void> => {
+  const paramsParsed = UpdateBillingDocumentParams.safeParse(req.params);
+  if (!paramsParsed.success) {
+    res.status(400).json({ error: paramsParsed.error.message });
+    return;
+  }
+  const bodyParsed = UpdateBillingDocumentBody.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: bodyParsed.error.message });
+    return;
+  }
+  const { id } = paramsParsed.data;
+  const data = bodyParsed.data;
+
+  // Build patch for the document row
+  const patch: Record<string, unknown> = {};
+  if (data.companyId !== undefined) patch.companyId = data.companyId;
+  if (data.customerName !== undefined) patch.customerName = data.customerName.trim();
+  if (data.customerAddress !== undefined)
+    patch.customerAddress = data.customerAddress?.trim() || null;
+  if (data.customerTin !== undefined) patch.customerTin = data.customerTin?.trim() || null;
+  if (data.issueDate !== undefined) {
+    const v = normalizeDate(data.issueDate);
+    if (v === "invalid" || v == null) {
+      res.status(400).json({ error: "Invalid issueDate" });
+      return;
+    }
+    patch.issueDate = v;
+  }
+  if (data.dueDate !== undefined) {
+    const v = normalizeDate(data.dueDate);
+    if (v === "invalid") {
+      res.status(400).json({ error: "Invalid dueDate" });
+      return;
+    }
+    patch.dueDate = v;
+  }
+  if (data.terms !== undefined) patch.terms = data.terms?.trim() || null;
+  if (data.gstRate !== undefined) {
+    const v = normalizeMoney(data.gstRate, 2, 3);
+    if (v == null) {
+      res.status(400).json({ error: "Invalid gstRate" });
+      return;
+    }
+    patch.gstRate = v;
+  }
+  if (data.gstInclusive !== undefined) patch.gstInclusive = data.gstInclusive;
+  if (data.notes !== undefined) patch.notes = data.notes?.trim() || null;
+  if (data.status !== undefined) patch.status = data.status;
+
+  // Validate replacement items if provided
+  let normalizedItems: { position: number; description: string; detail: string | null; qty: string; rate: string; amount: string }[] | null = null;
+  if (data.items !== undefined) {
+    if (!Array.isArray(data.items) || data.items.length === 0) {
+      res.status(400).json({ error: "At least one line item is required" });
+      return;
+    }
+    normalizedItems = [];
+    for (let i = 0; i < data.items.length; i++) {
+      const it = data.items[i];
+      const desc = (it.description ?? "").trim();
+      if (!desc) {
+        res.status(400).json({ error: `Item ${i + 1}: description is required` });
+        return;
+      }
+      const qty = normalizeMoney(it.qty ?? "1", 4, 10);
+      const rate = normalizeMoney(it.rate ?? "0", 4, 10);
+      if (qty == null || rate == null) {
+        res.status(400).json({ error: `Item ${i + 1}: invalid qty or rate` });
+        return;
+      }
+      const lineAmount = (Number(qty) * Number(rate)).toFixed(2);
+      normalizedItems.push({
+        position: i,
+        description: desc,
+        detail: it.detail?.trim() || null,
+        qty,
+        rate,
+        amount: lineAmount,
+      });
+    }
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      if (Object.keys(patch).length > 0) {
+        const updated = await tx
+          .update(billingDocumentsTable)
+          .set(patch)
+          .where(eq(billingDocumentsTable.id, id))
+          .returning({ id: billingDocumentsTable.id });
+        if (updated.length === 0) {
+          throw new Error("not_found");
+        }
+      } else {
+        // Make sure the row exists even if only items are changing
+        const existing = await tx
+          .select({ id: billingDocumentsTable.id })
+          .from(billingDocumentsTable)
+          .where(eq(billingDocumentsTable.id, id))
+          .limit(1);
+        if (existing.length === 0) throw new Error("not_found");
+      }
+      if (normalizedItems) {
+        await tx.delete(billingItemsTable).where(eq(billingItemsTable.documentId, id));
+        await tx
+          .insert(billingItemsTable)
+          .values(normalizedItems.map((it) => ({ ...it, documentId: id })));
+      }
+    });
+    res.status(204).end();
+  } catch (err) {
+    if ((err as Error).message === "not_found") {
+      res.status(404).json({ error: "Document not found" });
+      return;
+    }
+    req.log.error({ err }, "Failed to update billing document");
+    res.status(500).json({ error: "Failed to update document" });
+  }
+});
+
+router.delete("/billing/documents/:id", async (req, res): Promise<void> => {
+  const parsed = DeleteBillingDocumentParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const deleted = await db
+    .delete(billingDocumentsTable)
+    .where(eq(billingDocumentsTable.id, parsed.data.id))
+    .returning({ id: billingDocumentsTable.id });
+  if (deleted.length === 0) {
+    res.status(404).json({ error: "Document not found" });
+    return;
+  }
+  res.status(204).end();
+});
+
+export default router;

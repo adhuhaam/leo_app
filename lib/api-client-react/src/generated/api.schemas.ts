@@ -405,6 +405,116 @@ export interface LoaUpdate {
   signatureDate?: string;
 }
 
+export type BillingDocumentSummaryKind =
+  (typeof BillingDocumentSummaryKind)[keyof typeof BillingDocumentSummaryKind];
+
+export const BillingDocumentSummaryKind = {
+  invoice: "invoice",
+  quotation: "quotation",
+} as const;
+
+export interface BillingDocumentSummary {
+  id: number;
+  kind: BillingDocumentSummaryKind;
+  number: string;
+  companyId: number;
+  companyName: string;
+  customerName: string;
+  /** @nullable */
+  customerAddress?: string | null;
+  /** @nullable */
+  customerTin?: string | null;
+  issueDate: string;
+  /** @nullable */
+  dueDate?: string | null;
+  /** @nullable */
+  terms?: string | null;
+  gstRate: string;
+  gstInclusive: boolean;
+  /** @nullable */
+  notes?: string | null;
+  status: string;
+  subtotal: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillingItem {
+  id: number;
+  documentId: number;
+  position: number;
+  description: string;
+  /** @nullable */
+  detail?: string | null;
+  qty: string;
+  rate: string;
+  amount: string;
+}
+
+export type BillingDocument = BillingDocumentSummary & {
+  items: BillingItem[];
+};
+
+export interface BillingItemInput {
+  /** @minLength 1 */
+  description: string;
+  detail?: string;
+  qty?: string;
+  rate?: string;
+}
+
+export type BillingDocumentInputKind =
+  (typeof BillingDocumentInputKind)[keyof typeof BillingDocumentInputKind];
+
+export const BillingDocumentInputKind = {
+  invoice: "invoice",
+  quotation: "quotation",
+} as const;
+
+export interface BillingDocumentInput {
+  kind: BillingDocumentInputKind;
+  companyId: number;
+  /** @minLength 1 */
+  customerName: string;
+  customerAddress?: string;
+  customerTin?: string;
+  issueDate: string;
+  dueDate?: string;
+  terms?: string;
+  gstRate?: string;
+  gstInclusive?: boolean;
+  notes?: string;
+  status?: string;
+  /** @minItems 1 */
+  items: BillingItemInput[];
+}
+
+export interface BillingDocumentUpdate {
+  companyId?: number;
+  /** @minLength 1 */
+  customerName?: string;
+  /** @nullable */
+  customerAddress?: string | null;
+  /** @nullable */
+  customerTin?: string | null;
+  issueDate?: string;
+  /** @nullable */
+  dueDate?: string | null;
+  /** @nullable */
+  terms?: string | null;
+  gstRate?: string;
+  gstInclusive?: boolean;
+  /** @nullable */
+  notes?: string | null;
+  status?: string;
+  /** @minItems 1 */
+  items?: BillingItemInput[];
+}
+
+export interface BillingDocumentCreated {
+  id: number;
+}
+
 export type GetAuthStatus200 = {
   authenticated: boolean;
 };
@@ -434,6 +544,19 @@ export type ListExpensesParams = {
   categoryId?: number;
   search?: string;
 };
+
+export type ListBillingDocumentsParams = {
+  kind?: ListBillingDocumentsKind;
+  search?: string;
+};
+
+export type ListBillingDocumentsKind =
+  (typeof ListBillingDocumentsKind)[keyof typeof ListBillingDocumentsKind];
+
+export const ListBillingDocumentsKind = {
+  invoice: "invoice",
+  quotation: "quotation",
+} as const;
 
 export type ListLoaOptionsParams = {
   /**

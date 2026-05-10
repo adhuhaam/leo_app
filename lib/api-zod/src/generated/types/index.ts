@@ -6,6 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./billingDocument";
+export * from "./billingDocumentCreated";
+export * from "./billingDocumentInput";
+export * from "./billingDocumentInputKind";
+export * from "./billingDocumentSummary";
+export * from "./billingDocumentSummaryKind";
+export * from "./billingDocumentUpdate";
+export * from "./billingItem";
+export * from "./billingItemInput";
 export * from "./client";
 export * from "./clientInput";
 export * from "./clientUpdate";
@@ -20,6 +29,8 @@ export * from "./expenseInput";
 export * from "./expenseUpdate";
 export * from "./getAuthStatus200";
 export * from "./healthStatus";
+export * from "./listBillingDocumentsKind";
+export * from "./listBillingDocumentsParams";
 export * from "./listClientsParams";
 export * from "./listCompaniesParams";
 export * from "./listExpensesParams";

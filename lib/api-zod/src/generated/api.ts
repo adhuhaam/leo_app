@@ -683,6 +683,151 @@ export const DeleteExpenseParams = zod.object({
 });
 
 /**
+ * @summary List invoices and quotations
+ */
+export const ListBillingDocumentsQueryParams = zod.object({
+  kind: zod.enum(["invoice", "quotation"]).optional(),
+  search: zod.coerce.string().optional(),
+});
+
+export const ListBillingDocumentsResponseItem = zod.object({
+  id: zod.number(),
+  kind: zod.enum(["invoice", "quotation"]),
+  number: zod.string(),
+  companyId: zod.number(),
+  companyName: zod.string(),
+  customerName: zod.string(),
+  customerAddress: zod.string().nullish(),
+  customerTin: zod.string().nullish(),
+  issueDate: zod.string(),
+  dueDate: zod.string().nullish(),
+  terms: zod.string().nullish(),
+  gstRate: zod.string(),
+  gstInclusive: zod.boolean(),
+  notes: zod.string().nullish(),
+  status: zod.string(),
+  subtotal: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListBillingDocumentsResponse = zod.array(
+  ListBillingDocumentsResponseItem,
+);
+
+/**
+ * @summary Create an invoice or quotation
+ */
+
+export const CreateBillingDocumentBody = zod.object({
+  kind: zod.enum(["invoice", "quotation"]),
+  companyId: zod.number(),
+  customerName: zod.string().min(1),
+  customerAddress: zod.string().optional(),
+  customerTin: zod.string().optional(),
+  issueDate: zod.string(),
+  dueDate: zod.string().optional(),
+  terms: zod.string().optional(),
+  gstRate: zod.string().optional(),
+  gstInclusive: zod.boolean().optional(),
+  notes: zod.string().optional(),
+  status: zod.string().optional(),
+  items: zod
+    .array(
+      zod.object({
+        description: zod.string().min(1),
+        detail: zod.string().optional(),
+        qty: zod.string().optional(),
+        rate: zod.string().optional(),
+      }),
+    )
+    .min(1),
+});
+
+/**
+ * @summary Get an invoice or quotation with line items
+ */
+export const GetBillingDocumentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetBillingDocumentResponse = zod
+  .object({
+    id: zod.number(),
+    kind: zod.enum(["invoice", "quotation"]),
+    number: zod.string(),
+    companyId: zod.number(),
+    companyName: zod.string(),
+    customerName: zod.string(),
+    customerAddress: zod.string().nullish(),
+    customerTin: zod.string().nullish(),
+    issueDate: zod.string(),
+    dueDate: zod.string().nullish(),
+    terms: zod.string().nullish(),
+    gstRate: zod.string(),
+    gstInclusive: zod.boolean(),
+    notes: zod.string().nullish(),
+    status: zod.string(),
+    subtotal: zod.string(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      items: zod.array(
+        zod.object({
+          id: zod.number(),
+          documentId: zod.number(),
+          position: zod.number(),
+          description: zod.string(),
+          detail: zod.string().nullish(),
+          qty: zod.string(),
+          rate: zod.string(),
+          amount: zod.string(),
+        }),
+      ),
+    }),
+  );
+
+/**
+ * @summary Update an invoice or quotation
+ */
+export const UpdateBillingDocumentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateBillingDocumentBody = zod.object({
+  companyId: zod.number().optional(),
+  customerName: zod.string().min(1).optional(),
+  customerAddress: zod.string().nullish(),
+  customerTin: zod.string().nullish(),
+  issueDate: zod.string().optional(),
+  dueDate: zod.string().nullish(),
+  terms: zod.string().nullish(),
+  gstRate: zod.string().optional(),
+  gstInclusive: zod.boolean().optional(),
+  notes: zod.string().nullish(),
+  status: zod.string().optional(),
+  items: zod
+    .array(
+      zod.object({
+        description: zod.string().min(1),
+        detail: zod.string().optional(),
+        qty: zod.string().optional(),
+        rate: zod.string().optional(),
+      }),
+    )
+    .min(1)
+    .optional(),
+});
+
+/**
+ * @summary Delete an invoice or quotation
+ */
+export const DeleteBillingDocumentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary List LOA dropdown options
  */
 export const ListLoaOptionsQueryParams = zod.object({
