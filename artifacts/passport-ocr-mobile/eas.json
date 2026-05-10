@@ -11,7 +11,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "com.leo.os"
+        "EXPO_PUBLIC_DOMAIN": "leomaldives.com"
       }
     },
     "production": {
@@ -20,7 +20,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "com.leo.os"
+        "EXPO_PUBLIC_DOMAIN": "leomaldives.com"
       }
     }
   },
