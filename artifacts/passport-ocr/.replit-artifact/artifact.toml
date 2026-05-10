@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Passport OCR Dashboard"
+version = "1.0.0"
+id = "artifacts/passport-ocr"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25402
+
+[services.development]
+run = "pnpm --filter @workspace/passport-ocr run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/passport-ocr", "run", "build" ]
+publicDir = "artifacts/passport-ocr/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25402"
+BASE_PATH = "/"

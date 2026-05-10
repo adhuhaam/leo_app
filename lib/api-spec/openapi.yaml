@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: passports
+    description: Passport OCR operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,130 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /passports:
+    get:
+      operationId: listPassports
+      tags: [passports]
+      summary: List all passport records
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: nationality
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of passport records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Passport"
+
+  /passports/upload:
+    post:
+      operationId: uploadPassport
+      tags: [passports]
+      summary: Upload passport image/PDF for OCR extraction
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/PassportUpload"
+      responses:
+        "201":
+          description: Passport record created with extracted data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Passport"
+        "400":
+          description: Invalid file
+
+  /passports/stats:
+    get:
+      operationId: getPassportStats
+      tags: [passports]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Passport statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PassportStats"
+
+  /passports/{id}:
+    get:
+      operationId: getPassport
+      tags: [passports]
+      summary: Get a single passport record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Passport record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Passport"
+        "404":
+          description: Not found
+    patch:
+      operationId: updatePassport
+      tags: [passports]
+      summary: Update a passport record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PassportUpdate"
+      responses:
+        "200":
+          description: Updated passport record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Passport"
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePassport
+      tags: [passports]
+      summary: Delete a passport record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +160,82 @@ components:
       required:
         - status
 
+    Passport:
+      type: object
+      required: [id, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: ["string", "null"]
+        passportNumber:
+          type: ["string", "null"]
+        dateOfBirth:
+          type: ["string", "null"]
+        dateOfIssue:
+          type: ["string", "null"]
+        dateOfExpiry:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        nationality:
+          type: ["string", "null"]
+          description: "bangladesh or india"
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        errorMessage:
+          type: ["string", "null"]
+        originalFilename:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PassportUpload:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+
+    PassportUpdate:
+      type: object
+      properties:
+        fullName:
+          type: string
+        passportNumber:
+          type: string
+        dateOfBirth:
+          type: string
+        dateOfIssue:
+          type: string
+        dateOfExpiry:
+          type: string
+        address:
+          type: string
+        nationality:
+          type: string
+
+    PassportStats:
+      type: object
+      required: [total, completed, processing, failed, bangladeshi, indian, recentUploads]
+      properties:
+        total:
+          type: integer
+        completed:
+          type: integer
+        processing:
+          type: integer
+        failed:
+          type: integer
+        bangladeshi:
+          type: integer
+        indian:
+          type: integer
+        recentUploads:
+          type: array
+          items:
+            $ref: "#/components/schemas/Passport"

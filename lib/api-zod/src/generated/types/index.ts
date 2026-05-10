@@ -7,3 +7,9 @@
  */
 
 export * from "./healthStatus";
+export * from "./listPassportsParams";
+export * from "./passport";
+export * from "./passportStats";
+export * from "./passportStatus";
+export * from "./passportUpdate";
+export * from "./passportUpload";

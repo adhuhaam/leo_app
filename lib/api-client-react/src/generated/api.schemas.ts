@@ -8,3 +8,70 @@
 export interface HealthStatus {
   status: string;
 }
+
+export type PassportStatus =
+  (typeof PassportStatus)[keyof typeof PassportStatus];
+
+export const PassportStatus = {
+  processing: "processing",
+  completed: "completed",
+  failed: "failed",
+} as const;
+
+export interface Passport {
+  id: number;
+  /** @nullable */
+  fullName?: string | null;
+  /** @nullable */
+  passportNumber?: string | null;
+  /** @nullable */
+  dateOfBirth?: string | null;
+  /** @nullable */
+  dateOfIssue?: string | null;
+  /** @nullable */
+  dateOfExpiry?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /**
+   * bangladesh or india
+   * @nullable
+   */
+  nationality?: string | null;
+  status: PassportStatus;
+  /** @nullable */
+  errorMessage?: string | null;
+  /** @nullable */
+  originalFilename?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PassportUpload {
+  file: Blob;
+}
+
+export interface PassportUpdate {
+  fullName?: string;
+  passportNumber?: string;
+  dateOfBirth?: string;
+  dateOfIssue?: string;
+  dateOfExpiry?: string;
+  address?: string;
+  nationality?: string;
+}
+
+export interface PassportStats {
+  total: number;
+  completed: number;
+  processing: number;
+  failed: number;
+  bangladeshi: number;
+  indian: number;
+  recentUploads: Passport[];
+}
+
+export type ListPassportsParams = {
+  search?: string;
+  nationality?: string;
+  status?: string;
+};

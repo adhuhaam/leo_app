@@ -14,3 +14,128 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary List all passport records
+ */
+export const ListPassportsQueryParams = zod.object({
+  search: zod.coerce.string().optional(),
+  nationality: zod.coerce.string().optional(),
+  status: zod.coerce.string().optional(),
+});
+
+export const ListPassportsResponseItem = zod.object({
+  id: zod.number(),
+  fullName: zod.string().nullish(),
+  passportNumber: zod.string().nullish(),
+  dateOfBirth: zod.string().nullish(),
+  dateOfIssue: zod.string().nullish(),
+  dateOfExpiry: zod.string().nullish(),
+  address: zod.string().nullish(),
+  nationality: zod.string().nullish().describe("bangladesh or india"),
+  status: zod.enum(["processing", "completed", "failed"]),
+  errorMessage: zod.string().nullish(),
+  originalFilename: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListPassportsResponse = zod.array(ListPassportsResponseItem);
+
+/**
+ * @summary Upload passport image/PDF for OCR extraction
+ */
+export const UploadPassportBody = zod.object({
+  file: zod.instanceof(File),
+});
+
+/**
+ * @summary Get dashboard statistics
+ */
+export const GetPassportStatsResponse = zod.object({
+  total: zod.number(),
+  completed: zod.number(),
+  processing: zod.number(),
+  failed: zod.number(),
+  bangladeshi: zod.number(),
+  indian: zod.number(),
+  recentUploads: zod.array(
+    zod.object({
+      id: zod.number(),
+      fullName: zod.string().nullish(),
+      passportNumber: zod.string().nullish(),
+      dateOfBirth: zod.string().nullish(),
+      dateOfIssue: zod.string().nullish(),
+      dateOfExpiry: zod.string().nullish(),
+      address: zod.string().nullish(),
+      nationality: zod.string().nullish().describe("bangladesh or india"),
+      status: zod.enum(["processing", "completed", "failed"]),
+      errorMessage: zod.string().nullish(),
+      originalFilename: zod.string().nullish(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get a single passport record
+ */
+export const GetPassportParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetPassportResponse = zod.object({
+  id: zod.number(),
+  fullName: zod.string().nullish(),
+  passportNumber: zod.string().nullish(),
+  dateOfBirth: zod.string().nullish(),
+  dateOfIssue: zod.string().nullish(),
+  dateOfExpiry: zod.string().nullish(),
+  address: zod.string().nullish(),
+  nationality: zod.string().nullish().describe("bangladesh or india"),
+  status: zod.enum(["processing", "completed", "failed"]),
+  errorMessage: zod.string().nullish(),
+  originalFilename: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update a passport record
+ */
+export const UpdatePassportParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdatePassportBody = zod.object({
+  fullName: zod.string().optional(),
+  passportNumber: zod.string().optional(),
+  dateOfBirth: zod.string().optional(),
+  dateOfIssue: zod.string().optional(),
+  dateOfExpiry: zod.string().optional(),
+  address: zod.string().optional(),
+  nationality: zod.string().optional(),
+});
+
+export const UpdatePassportResponse = zod.object({
+  id: zod.number(),
+  fullName: zod.string().nullish(),
+  passportNumber: zod.string().nullish(),
+  dateOfBirth: zod.string().nullish(),
+  dateOfIssue: zod.string().nullish(),
+  dateOfExpiry: zod.string().nullish(),
+  address: zod.string().nullish(),
+  nationality: zod.string().nullish().describe("bangladesh or india"),
+  status: zod.enum(["processing", "completed", "failed"]),
+  errorMessage: zod.string().nullish(),
+  originalFilename: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a passport record
+ */
+export const DeletePassportParams = zod.object({
+  id: zod.coerce.number(),
+});

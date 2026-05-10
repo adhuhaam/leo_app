@@ -5,18 +5,28 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  HealthStatus,
+  ListPassportsParams,
+  Passport,
+  PassportStats,
+  PassportUpdate,
+  PassportUpload,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +109,518 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List all passport records
+ */
+export const getListPassportsUrl = (params?: ListPassportsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/passports?${stringifiedParams}`
+    : `/api/passports`;
+};
+
+export const listPassports = async (
+  params?: ListPassportsParams,
+  options?: RequestInit,
+): Promise<Passport[]> => {
+  return customFetch<Passport[]>(getListPassportsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPassportsQueryKey = (params?: ListPassportsParams) => {
+  return [`/api/passports`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPassportsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPassports>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListPassportsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPassports>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPassportsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPassports>>> = ({
+    signal,
+  }) => listPassports(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPassports>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPassportsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPassports>>
+>;
+export type ListPassportsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all passport records
+ */
+
+export function useListPassports<
+  TData = Awaited<ReturnType<typeof listPassports>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListPassportsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPassports>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPassportsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Upload passport image/PDF for OCR extraction
+ */
+export const getUploadPassportUrl = () => {
+  return `/api/passports/upload`;
+};
+
+export const uploadPassport = async (
+  passportUpload: PassportUpload,
+  options?: RequestInit,
+): Promise<Passport> => {
+  const formData = new FormData();
+  formData.append(`file`, passportUpload.file);
+
+  return customFetch<Passport>(getUploadPassportUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadPassportMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadPassport>>,
+    TError,
+    { data: BodyType<PassportUpload> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadPassport>>,
+  TError,
+  { data: BodyType<PassportUpload> },
+  TContext
+> => {
+  const mutationKey = ["uploadPassport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadPassport>>,
+    { data: BodyType<PassportUpload> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadPassport(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadPassportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadPassport>>
+>;
+export type UploadPassportMutationBody = BodyType<PassportUpload>;
+export type UploadPassportMutationError = ErrorType<void>;
+
+/**
+ * @summary Upload passport image/PDF for OCR extraction
+ */
+export const useUploadPassport = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadPassport>>,
+    TError,
+    { data: BodyType<PassportUpload> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof uploadPassport>>,
+  TError,
+  { data: BodyType<PassportUpload> },
+  TContext
+> => {
+  return useMutation(getUploadPassportMutationOptions(options));
+};
+
+/**
+ * @summary Get dashboard statistics
+ */
+export const getGetPassportStatsUrl = () => {
+  return `/api/passports/stats`;
+};
+
+export const getPassportStats = async (
+  options?: RequestInit,
+): Promise<PassportStats> => {
+  return customFetch<PassportStats>(getGetPassportStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPassportStatsQueryKey = () => {
+  return [`/api/passports/stats`] as const;
+};
+
+export const getGetPassportStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPassportStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPassportStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPassportStatsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPassportStats>>
+  > = ({ signal }) => getPassportStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPassportStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPassportStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPassportStats>>
+>;
+export type GetPassportStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get dashboard statistics
+ */
+
+export function useGetPassportStats<
+  TData = Awaited<ReturnType<typeof getPassportStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPassportStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPassportStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a single passport record
+ */
+export const getGetPassportUrl = (id: number) => {
+  return `/api/passports/${id}`;
+};
+
+export const getPassport = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Passport> => {
+  return customFetch<Passport>(getGetPassportUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPassportQueryKey = (id: number) => {
+  return [`/api/passports/${id}`] as const;
+};
+
+export const getGetPassportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPassport>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPassport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPassportQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPassport>>> = ({
+    signal,
+  }) => getPassport(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPassport>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPassportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPassport>>
+>;
+export type GetPassportQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a single passport record
+ */
+
+export function useGetPassport<
+  TData = Awaited<ReturnType<typeof getPassport>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPassport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPassportQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a passport record
+ */
+export const getUpdatePassportUrl = (id: number) => {
+  return `/api/passports/${id}`;
+};
+
+export const updatePassport = async (
+  id: number,
+  passportUpdate: PassportUpdate,
+  options?: RequestInit,
+): Promise<Passport> => {
+  return customFetch<Passport>(getUpdatePassportUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(passportUpdate),
+  });
+};
+
+export const getUpdatePassportMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePassport>>,
+    TError,
+    { id: number; data: BodyType<PassportUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePassport>>,
+  TError,
+  { id: number; data: BodyType<PassportUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updatePassport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePassport>>,
+    { id: number; data: BodyType<PassportUpdate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updatePassport(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePassportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePassport>>
+>;
+export type UpdatePassportMutationBody = BodyType<PassportUpdate>;
+export type UpdatePassportMutationError = ErrorType<void>;
+
+/**
+ * @summary Update a passport record
+ */
+export const useUpdatePassport = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePassport>>,
+    TError,
+    { id: number; data: BodyType<PassportUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updatePassport>>,
+  TError,
+  { id: number; data: BodyType<PassportUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdatePassportMutationOptions(options));
+};
+
+/**
+ * @summary Delete a passport record
+ */
+export const getDeletePassportUrl = (id: number) => {
+  return `/api/passports/${id}`;
+};
+
+export const deletePassport = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeletePassportUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeletePassportMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePassport>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deletePassport>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deletePassport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deletePassport>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deletePassport(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeletePassportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deletePassport>>
+>;
+
+export type DeletePassportMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete a passport record
+ */
+export const useDeletePassport = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePassport>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deletePassport>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeletePassportMutationOptions(options));
+};
