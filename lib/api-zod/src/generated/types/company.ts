@@ -17,6 +17,16 @@ export interface Company {
   country?: string | null;
   /** @nullable */
   registrationNumber?: string | null;
+  /**
+   * Base64 data URL (image/png or image/jpeg) shown at the top of generated LOA PDFs
+   * @nullable
+   */
+  letterheadImage?: string | null;
+  /**
+   * Base64 data URL (image/png or image/jpeg) inserted on the signature line of generated LOA PDFs
+   * @nullable
+   */
+  signatureImage?: string | null;
   createdAt: string;
   updatedAt: string;
 }

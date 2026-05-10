@@ -21,9 +21,13 @@ import type {
   CompanyInput,
   CompanyUpdate,
   HealthStatus,
+  ListCompaniesParams,
+  ListLoaOptionsParams,
   ListPassportsParams,
   Loa,
   LoaInput,
+  LoaOption,
+  LoaOptionInput,
   LoaUpdate,
   Passport,
   PassportStats,
@@ -634,41 +638,57 @@ export const useDeletePassport = <
 /**
  * @summary List all companies
  */
-export const getListCompaniesUrl = () => {
-  return `/api/companies`;
+export const getListCompaniesUrl = (params?: ListCompaniesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/companies?${stringifiedParams}`
+    : `/api/companies`;
 };
 
 export const listCompanies = async (
+  params?: ListCompaniesParams,
   options?: RequestInit,
 ): Promise<Company[]> => {
-  return customFetch<Company[]>(getListCompaniesUrl(), {
+  return customFetch<Company[]>(getListCompaniesUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListCompaniesQueryKey = () => {
-  return [`/api/companies`] as const;
+export const getListCompaniesQueryKey = (params?: ListCompaniesParams) => {
+  return [`/api/companies`, ...(params ? [params] : [])] as const;
 };
 
 export const getListCompaniesQueryOptions = <
   TData = Awaited<ReturnType<typeof listCompanies>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listCompanies>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: ListCompaniesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listCompanies>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListCompaniesQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListCompaniesQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listCompanies>>> = ({
     signal,
-  }) => listCompanies({ signal, ...requestOptions });
+  }) => listCompanies(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listCompanies>>,
@@ -689,15 +709,18 @@ export type ListCompaniesQueryError = ErrorType<unknown>;
 export function useListCompanies<
   TData = Awaited<ReturnType<typeof listCompanies>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listCompanies>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListCompaniesQueryOptions(options);
+>(
+  params?: ListCompaniesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listCompanies>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListCompaniesQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -1358,4 +1381,268 @@ export const useDeleteLoa = <
   TContext
 > => {
   return useMutation(getDeleteLoaMutationOptions(options));
+};
+
+/**
+ * @summary List LOA dropdown options
+ */
+export const getListLoaOptionsUrl = (params?: ListLoaOptionsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/loa-options?${stringifiedParams}`
+    : `/api/loa-options`;
+};
+
+export const listLoaOptions = async (
+  params?: ListLoaOptionsParams,
+  options?: RequestInit,
+): Promise<LoaOption[]> => {
+  return customFetch<LoaOption[]>(getListLoaOptionsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLoaOptionsQueryKey = (params?: ListLoaOptionsParams) => {
+  return [`/api/loa-options`, ...(params ? [params] : [])] as const;
+};
+
+export const getListLoaOptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLoaOptions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLoaOptionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLoaOptions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLoaOptionsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listLoaOptions>>> = ({
+    signal,
+  }) => listLoaOptions(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLoaOptions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListLoaOptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLoaOptions>>
+>;
+export type ListLoaOptionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List LOA dropdown options
+ */
+
+export function useListLoaOptions<
+  TData = Awaited<ReturnType<typeof listLoaOptions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLoaOptionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLoaOptions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListLoaOptionsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a new LOA dropdown option
+ */
+export const getCreateLoaOptionUrl = () => {
+  return `/api/loa-options`;
+};
+
+export const createLoaOption = async (
+  loaOptionInput: LoaOptionInput,
+  options?: RequestInit,
+): Promise<LoaOption> => {
+  return customFetch<LoaOption>(getCreateLoaOptionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(loaOptionInput),
+  });
+};
+
+export const getCreateLoaOptionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLoaOption>>,
+    TError,
+    { data: BodyType<LoaOptionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLoaOption>>,
+  TError,
+  { data: BodyType<LoaOptionInput> },
+  TContext
+> => {
+  const mutationKey = ["createLoaOption"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLoaOption>>,
+    { data: BodyType<LoaOptionInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createLoaOption(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLoaOptionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLoaOption>>
+>;
+export type CreateLoaOptionMutationBody = BodyType<LoaOptionInput>;
+export type CreateLoaOptionMutationError = ErrorType<void>;
+
+/**
+ * @summary Add a new LOA dropdown option
+ */
+export const useCreateLoaOption = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLoaOption>>,
+    TError,
+    { data: BodyType<LoaOptionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createLoaOption>>,
+  TError,
+  { data: BodyType<LoaOptionInput> },
+  TContext
+> => {
+  return useMutation(getCreateLoaOptionMutationOptions(options));
+};
+
+/**
+ * @summary Delete a LOA dropdown option
+ */
+export const getDeleteLoaOptionUrl = (id: number) => {
+  return `/api/loa-options/${id}`;
+};
+
+export const deleteLoaOption = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteLoaOptionUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteLoaOptionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteLoaOption>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteLoaOption>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteLoaOption"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteLoaOption>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteLoaOption(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteLoaOptionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteLoaOption>>
+>;
+
+export type DeleteLoaOptionMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete a LOA dropdown option
+ */
+export const useDeleteLoaOption = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteLoaOption>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteLoaOption>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteLoaOptionMutationOptions(options));
 };

@@ -20,3 +20,4 @@
 export * from "./passports";
 export * from "./companies";
 export * from "./loa";
+export * from "./loa-options";

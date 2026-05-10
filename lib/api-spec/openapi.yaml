@@ -16,6 +16,8 @@ tags:
     description: Company management
   - name: loa
     description: Letter of Appointment operations
+  - name: loa-options
+    description: Reusable dropdown options for LOA form (work types, work sites, job titles)
 paths:
   /healthz:
     get:
@@ -159,6 +161,12 @@ paths:
       operationId: listCompanies
       tags: [companies]
       summary: List all companies
+      parameters:
+        - name: withBranding
+          in: query
+          description: When true, include letterheadImage and signatureImage (heavy base64 fields). Defaults to false.
+          schema:
+            type: boolean
       responses:
         "200":
           description: List of companies
@@ -321,6 +329,64 @@ paths:
         "404":
           description: Not found
 
+  /loa-options:
+    get:
+      operationId: listLoaOptions
+      tags: [loa-options]
+      summary: List LOA dropdown options
+      parameters:
+        - name: category
+          in: query
+          description: Filter by category (work_type, work_site, job_title)
+          schema:
+            type: string
+            enum: [work_type, work_site, job_title]
+      responses:
+        "200":
+          description: List of options
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoaOption"
+    post:
+      operationId: createLoaOption
+      tags: [loa-options]
+      summary: Add a new LOA dropdown option
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoaOptionInput"
+      responses:
+        "201":
+          description: Created option
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoaOption"
+        "409":
+          description: Option already exists in this category
+
+  /loa-options/{id}:
+    delete:
+      operationId: deleteLoaOption
+      tags: [loa-options]
+      summary: Delete a LOA dropdown option
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
@@ -330,6 +396,31 @@ components:
           type: string
       required:
         - status
+
+    LoaOption:
+      type: object
+      required: [id, category, value, createdAt]
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+          enum: [work_type, work_site, job_title]
+        value:
+          type: string
+        createdAt:
+          type: string
+
+    LoaOptionInput:
+      type: object
+      required: [category, value]
+      properties:
+        category:
+          type: string
+          enum: [work_type, work_site, job_title]
+        value:
+          type: string
+          minLength: 1
 
     Passport:
       type: object
@@ -427,6 +518,12 @@ components:
           type: ["string", "null"]
         registrationNumber:
           type: ["string", "null"]
+        letterheadImage:
+          type: ["string", "null"]
+          description: Base64 data URL (image/png or image/jpeg) shown at the top of generated LOA PDFs
+        signatureImage:
+          type: ["string", "null"]
+          description: Base64 data URL (image/png or image/jpeg) inserted on the signature line of generated LOA PDFs
         createdAt:
           type: string
         updatedAt:
@@ -446,6 +543,10 @@ components:
           type: string
         registrationNumber:
           type: string
+        letterheadImage:
+          type: string
+        signatureImage:
+          type: string
 
     CompanyUpdate:
       type: object
@@ -460,6 +561,10 @@ components:
           type: string
         registrationNumber:
           type: string
+        letterheadImage:
+          type: ["string", "null"]
+        signatureImage:
+          type: ["string", "null"]
 
     Loa:
       type: object

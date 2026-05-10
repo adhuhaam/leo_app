@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
 import PDFDocument from "pdfkit";
-import { db, loaTable } from "@workspace/db";
+import { db, loaTable, companiesTable } from "@workspace/db";
 import {
   CreateLoaBody,
   GetLoaParams,
@@ -96,6 +96,32 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
     return;
   }
 
+  // Look up the originating company so we can use its letterhead + signature.
+  // Fall back gracefully if the company was deleted or never linked.
+  let letterheadImage: string | null = null;
+  let signatureImage: string | null = null;
+  if (loa.companyId != null) {
+    const [company] = await db.select().from(companiesTable).where(eq(companiesTable.id, loa.companyId));
+    if (company) {
+      letterheadImage = company.letterheadImage ?? null;
+      signatureImage = company.signatureImage ?? null;
+    }
+  }
+
+  // Decode "data:image/...;base64,XXXX" into a Buffer that pdfkit can embed.
+  const decodeDataUrl = (dataUrl: string | null): Buffer | null => {
+    if (!dataUrl) return null;
+    const m = dataUrl.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
+    if (!m) return null;
+    try {
+      return Buffer.from(m[2], "base64");
+    } catch {
+      return null;
+    }
+  };
+  const letterheadBuf = decodeDataUrl(letterheadImage);
+  const signatureBuf = decodeDataUrl(signatureImage);
+
   // A4: 595.28 x 841.89 points
   const doc = new PDFDocument({ size: "A4", margin: 60, info: { Title: "Letter of Appointment" } });
 
@@ -106,7 +132,22 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
   );
   doc.pipe(res);
 
-  // ─── Title (centered letterhead) ─────────────────────────────────────────
+  // ─── Letterhead image (centered, capped width) ───────────────────────────
+  if (letterheadBuf) {
+    try {
+      const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const maxW = Math.min(pageWidth, 360);
+      const imgX = doc.page.margins.left + (pageWidth - maxW) / 2;
+      const imgY = doc.y;
+      doc.image(letterheadBuf, imgX, imgY, { fit: [maxW, 90], align: "center" });
+      doc.y = imgY + 90;
+      doc.moveDown(1);
+    } catch (err) {
+      req.log.warn({ err }, "Failed to embed company letterhead — skipping");
+    }
+  }
+
+  // ─── Title ───────────────────────────────────────────────────────────────
   doc
     .font("Helvetica-Bold")
     .fontSize(14)
@@ -186,10 +227,24 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
   doc.font("Helvetica-Bold").fontSize(11).text("Details of Signatory;").moveDown(0.3);
   field("Name", loa.signatoryName); lineGap();
   field("Designation", loa.signatoryDesignation);
-  doc.moveDown(3);
+  doc.moveDown(2);
 
-  field("Signature", "");
-  doc.moveDown(0.6);
+  // ─── Signature line (with embedded e-signature if available) ─────────────
+  if (signatureBuf) {
+    doc.font("Helvetica-Bold").fontSize(10).text("Signature: ", { continued: false });
+    try {
+      const sigY = doc.y;
+      doc.image(signatureBuf, doc.page.margins.left + 10, sigY, { fit: [160, 50] });
+      doc.y = sigY + 55;
+    } catch (err) {
+      req.log.warn({ err }, "Failed to embed company signature — skipping");
+      doc.moveDown(2);
+    }
+  } else {
+    doc.moveDown(1);
+    field("Signature", "");
+    doc.moveDown(0.6);
+  }
   field("Date", fmtDate(loa.signatureDate));
 
   doc.end();

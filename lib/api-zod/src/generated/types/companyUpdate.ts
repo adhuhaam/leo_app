@@ -12,4 +12,8 @@ export interface CompanyUpdate {
   email?: string;
   country?: string;
   registrationNumber?: string;
+  /** @nullable */
+  letterheadImage?: string | null;
+  /** @nullable */
+  signatureImage?: string | null;
 }

@@ -8,6 +8,7 @@ import {
   Menu,
   X,
   Sparkles,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -16,6 +17,7 @@ const navItems = [
   { href: "/upload", label: "Process Document", icon: UploadCloud, group: "Operations" },
   { href: "/passports", label: "Records", icon: FileText, group: "Operations" },
   { href: "/loa", label: "Letter of Appointment", icon: FileSignature, group: "Operations" },
+  { href: "/settings", label: "Settings", icon: Settings, group: "System" },
 ];
 
 function BrandMark({ size = "default" }: { size?: "default" | "small" }) {

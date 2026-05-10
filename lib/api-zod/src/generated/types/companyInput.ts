@@ -12,4 +12,6 @@ export interface CompanyInput {
   email?: string;
   country?: string;
   registrationNumber?: string;
+  letterheadImage?: string;
+  signatureImage?: string;
 }

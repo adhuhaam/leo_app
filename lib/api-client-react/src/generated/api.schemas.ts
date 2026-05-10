@@ -9,6 +9,37 @@ export interface HealthStatus {
   status: string;
 }
 
+export type LoaOptionCategory =
+  (typeof LoaOptionCategory)[keyof typeof LoaOptionCategory];
+
+export const LoaOptionCategory = {
+  work_type: "work_type",
+  work_site: "work_site",
+  job_title: "job_title",
+} as const;
+
+export interface LoaOption {
+  id: number;
+  category: LoaOptionCategory;
+  value: string;
+  createdAt: string;
+}
+
+export type LoaOptionInputCategory =
+  (typeof LoaOptionInputCategory)[keyof typeof LoaOptionInputCategory];
+
+export const LoaOptionInputCategory = {
+  work_type: "work_type",
+  work_site: "work_site",
+  job_title: "job_title",
+} as const;
+
+export interface LoaOptionInput {
+  category: LoaOptionInputCategory;
+  /** @minLength 1 */
+  value: string;
+}
+
 export type PassportStatus =
   (typeof PassportStatus)[keyof typeof PassportStatus];
 
@@ -81,6 +112,16 @@ export interface Company {
   country?: string | null;
   /** @nullable */
   registrationNumber?: string | null;
+  /**
+   * Base64 data URL (image/png or image/jpeg) shown at the top of generated LOA PDFs
+   * @nullable
+   */
+  letterheadImage?: string | null;
+  /**
+   * Base64 data URL (image/png or image/jpeg) inserted on the signature line of generated LOA PDFs
+   * @nullable
+   */
+  signatureImage?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -91,6 +132,8 @@ export interface CompanyInput {
   email?: string;
   country?: string;
   registrationNumber?: string;
+  letterheadImage?: string;
+  signatureImage?: string;
 }
 
 export interface CompanyUpdate {
@@ -99,6 +142,10 @@ export interface CompanyUpdate {
   email?: string;
   country?: string;
   registrationNumber?: string;
+  /** @nullable */
+  letterheadImage?: string | null;
+  /** @nullable */
+  signatureImage?: string | null;
 }
 
 export interface Loa {
@@ -222,3 +269,26 @@ export type ListPassportsParams = {
   nationality?: string;
   status?: string;
 };
+
+export type ListCompaniesParams = {
+  /**
+   * When true, include letterheadImage and signatureImage (heavy base64 fields). Defaults to false.
+   */
+  withBranding?: boolean;
+};
+
+export type ListLoaOptionsParams = {
+  /**
+   * Filter by category (work_type, work_site, job_title)
+   */
+  category?: ListLoaOptionsCategory;
+};
+
+export type ListLoaOptionsCategory =
+  (typeof ListLoaOptionsCategory)[keyof typeof ListLoaOptionsCategory];
+
+export const ListLoaOptionsCategory = {
+  work_type: "work_type",
+  work_site: "work_site",
+  job_title: "job_title",
+} as const;

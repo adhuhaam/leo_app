@@ -8,6 +8,7 @@ import Dashboard from "@/pages/dashboard";
 import UploadPage from "@/pages/upload";
 import PassportsPage from "@/pages/passports";
 import LoaPage from "@/pages/loa";
+import SettingsPage from "@/pages/settings";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ function Router() {
         <Route path="/upload" component={UploadPage} />
         <Route path="/passports" component={PassportsPage} />
         <Route path="/loa" component={LoaPage} />
+        <Route path="/settings" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

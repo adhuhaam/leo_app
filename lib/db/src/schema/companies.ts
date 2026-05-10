@@ -9,6 +9,8 @@ export const companiesTable = pgTable("companies", {
   email: text("email"),
   country: text("country"),
   registrationNumber: text("registration_number"),
+  letterheadImage: text("letterhead_image"),
+  signatureImage: text("signature_image"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

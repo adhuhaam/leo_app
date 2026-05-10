@@ -7,9 +7,11 @@ import {
   useListPassports,
   useListCompanies,
   useCreateCompany,
+  useListLoaOptions,
   getListLoaQueryKey,
 } from "@workspace/api-client-react";
-import type { Loa, Passport, Company } from "@workspace/api-client-react";
+import type { Loa, Passport, Company, LoaOption } from "@workspace/api-client-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -237,7 +239,75 @@ function StepOne({
   );
 }
 
+function OptionPicker({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  testId,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: LoaOption[];
+  placeholder: string;
+  testId: string;
+}) {
+  // Allow free-text fallback when the current value isn't in the saved list.
+  const inList = !value || options.some((o) => o.value === value);
+  const [customMode, setCustomMode] = useState(!inList && !!value);
+
+  const showCustom = customMode || options.length === 0;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label>{label}</Label>
+        {options.length > 0 && (
+          <button
+            type="button"
+            className="text-[10px] text-primary hover:underline"
+            onClick={() => {
+              setCustomMode((m) => !m);
+              if (!customMode) onChange("");
+            }}
+            data-testid={`button-toggle-custom-${testId}`}
+          >
+            {showCustom ? "Pick from list" : "Type custom"}
+          </button>
+        )}
+      </div>
+      {showCustom ? (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={options.length === 0 ? `${placeholder} (add to Settings to enable dropdown)` : placeholder}
+          data-testid={`input-${testId}`}
+        />
+      ) : (
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger data-testid={`select-${testId}`}>
+            <SelectValue placeholder={`Select ${label.toLowerCase()}...`} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((o) => (
+              <SelectItem key={o.id} value={o.value} data-testid={`option-${testId}-${o.id}`}>
+                {o.value}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
+  );
+}
+
 function StepTwo({ form, setForm }: { form: FormData; setForm: (f: FormData) => void }) {
+  const { data: jobTitles = [] } = useListLoaOptions({ category: "job_title" });
+  const { data: workTypes = [] } = useListLoaOptions({ category: "work_type" });
+  const { data: workSites = [] } = useListLoaOptions({ category: "work_site" });
+
   const f = (key: keyof FormData, label: string, placeholder?: string, multiline?: boolean) => (
     <div className="space-y-1.5">
       <Label>{label}</Label>
@@ -260,14 +330,46 @@ function StepTwo({ form, setForm }: { form: FormData; setForm: (f: FormData) => 
     </div>
   );
 
+  const noOptions = jobTitles.length === 0 && workTypes.length === 0 && workSites.length === 0;
+
   return (
     <div className="space-y-4">
+      {noOptions && (
+        <div className="rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+          Tip: Add reusable Job Titles, Work Types, and Work Sites in{" "}
+          <Link href="/settings" className="text-primary font-medium hover:underline">
+            Settings
+          </Link>{" "}
+          to enable dropdowns here.
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {f("jobTitle", "Job Title / Occupation", "e.g. Construction Worker")}
-        {f("workType", "Work Type", "e.g. Manual Labour")}
+        <OptionPicker
+          label="Job Title / Occupation"
+          value={form.jobTitle}
+          onChange={(v) => setForm({ ...form, jobTitle: v })}
+          options={jobTitles}
+          placeholder="e.g. Construction Worker"
+          testId="jobTitle"
+        />
+        <OptionPicker
+          label="Work Type"
+          value={form.workType}
+          onChange={(v) => setForm({ ...form, workType: v })}
+          options={workTypes}
+          placeholder="e.g. Manual Labour"
+          testId="workType"
+        />
         {f("basicSalary", "Basic Salary (USD)", "e.g. 500")}
         {f("salaryPaymentDate", "Date of Salary Payment")}
-        {f("workSite", "Work Site", "e.g. Guraidhoo, Maldives")}
+        <OptionPicker
+          label="Work Site"
+          value={form.workSite}
+          onChange={(v) => setForm({ ...form, workSite: v })}
+          options={workSites}
+          placeholder="e.g. Guraidhoo, Maldives"
+          testId="workSite"
+        />
         {f("dateOfCommence", "Date of Commence")}
         {f("workStatus", "Work Status")}
         {f("contractDuration", "Contract Duration")}

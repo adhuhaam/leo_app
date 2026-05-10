@@ -143,6 +143,15 @@ export const DeletePassportParams = zod.object({
 /**
  * @summary List all companies
  */
+export const ListCompaniesQueryParams = zod.object({
+  withBranding: zod.coerce
+    .boolean()
+    .optional()
+    .describe(
+      "When true, include letterheadImage and signatureImage (heavy base64 fields). Defaults to false.",
+    ),
+});
+
 export const ListCompaniesResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
@@ -150,6 +159,18 @@ export const ListCompaniesResponseItem = zod.object({
   email: zod.string().nullish(),
   country: zod.string().nullish(),
   registrationNumber: zod.string().nullish(),
+  letterheadImage: zod
+    .string()
+    .nullish()
+    .describe(
+      "Base64 data URL (image\/png or image\/jpeg) shown at the top of generated LOA PDFs",
+    ),
+  signatureImage: zod
+    .string()
+    .nullish()
+    .describe(
+      "Base64 data URL (image\/png or image\/jpeg) inserted on the signature line of generated LOA PDFs",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -164,6 +185,8 @@ export const CreateCompanyBody = zod.object({
   email: zod.string().optional(),
   country: zod.string().optional(),
   registrationNumber: zod.string().optional(),
+  letterheadImage: zod.string().optional(),
+  signatureImage: zod.string().optional(),
 });
 
 /**
@@ -179,6 +202,8 @@ export const UpdateCompanyBody = zod.object({
   email: zod.string().optional(),
   country: zod.string().optional(),
   registrationNumber: zod.string().optional(),
+  letterheadImage: zod.string().nullish(),
+  signatureImage: zod.string().nullish(),
 });
 
 export const UpdateCompanyResponse = zod.object({
@@ -188,6 +213,18 @@ export const UpdateCompanyResponse = zod.object({
   email: zod.string().nullish(),
   country: zod.string().nullish(),
   registrationNumber: zod.string().nullish(),
+  letterheadImage: zod
+    .string()
+    .nullish()
+    .describe(
+      "Base64 data URL (image\/png or image\/jpeg) shown at the top of generated LOA PDFs",
+    ),
+  signatureImage: zod
+    .string()
+    .nullish()
+    .describe(
+      "Base64 data URL (image\/png or image\/jpeg) inserted on the signature line of generated LOA PDFs",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -378,5 +415,39 @@ export const UpdateLoaResponse = zod.object({
  * @summary Delete a LOA entry
  */
 export const DeleteLoaParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List LOA dropdown options
+ */
+export const ListLoaOptionsQueryParams = zod.object({
+  category: zod
+    .enum(["work_type", "work_site", "job_title"])
+    .optional()
+    .describe("Filter by category (work_type, work_site, job_title)"),
+});
+
+export const ListLoaOptionsResponseItem = zod.object({
+  id: zod.number(),
+  category: zod.enum(["work_type", "work_site", "job_title"]),
+  value: zod.string(),
+  createdAt: zod.string(),
+});
+export const ListLoaOptionsResponse = zod.array(ListLoaOptionsResponseItem);
+
+/**
+ * @summary Add a new LOA dropdown option
+ */
+
+export const CreateLoaOptionBody = zod.object({
+  category: zod.enum(["work_type", "work_site", "job_title"]),
+  value: zod.string().min(1),
+});
+
+/**
+ * @summary Delete a LOA dropdown option
+ */
+export const DeleteLoaOptionParams = zod.object({
   id: zod.coerce.number(),
 });
