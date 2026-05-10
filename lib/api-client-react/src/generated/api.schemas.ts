@@ -9,6 +9,11 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface LoginInput {
+  /** @minLength 1 */
+  password: string;
+}
+
 export type LoaOptionCategory =
   (typeof LoaOptionCategory)[keyof typeof LoaOptionCategory];
 
@@ -263,6 +268,10 @@ export interface LoaUpdate {
   signatoryDesignation?: string;
   signatureDate?: string;
 }
+
+export type GetAuthStatus200 = {
+  authenticated: boolean;
+};
 
 export type ListPassportsParams = {
   search?: string;

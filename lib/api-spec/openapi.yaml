@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
   - name: passports
     description: Passport OCR operations
   - name: companies
@@ -32,6 +34,49 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/me:
+    get:
+      operationId: getAuthStatus
+      tags: [auth]
+      summary: Returns current auth status
+      responses:
+        "200":
+          description: Auth status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authenticated]
+                properties:
+                  authenticated:
+                    type: boolean
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with the shared password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "204":
+          description: Logged in
+        "401":
+          description: Invalid password
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out and destroy the session
+      responses:
+        "204":
+          description: Logged out
 
   /passports:
     get:
@@ -396,6 +441,14 @@ components:
           type: string
       required:
         - status
+
+    LoginInput:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 1
 
     LoaOption:
       type: object

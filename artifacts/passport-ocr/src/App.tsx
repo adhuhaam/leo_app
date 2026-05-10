@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/app-layout";
+import { AuthGate } from "@/components/auth-gate";
 import Dashboard from "@/pages/dashboard";
 import UploadPage from "@/pages/upload";
 import PassportsPage from "@/pages/passports";
@@ -14,16 +15,18 @@ const queryClient = new QueryClient();
 
 function Router() {
   return (
-    <AppLayout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/upload" component={UploadPage} />
-        <Route path="/passports" component={PassportsPage} />
-        <Route path="/loa" component={LoaPage} />
-        <Route path="/settings" component={SettingsPage} />
-        <Route component={NotFound} />
-      </Switch>
-    </AppLayout>
+    <AuthGate>
+      <AppLayout>
+        <Switch>
+          <Route path="/" component={Dashboard} />
+          <Route path="/upload" component={UploadPage} />
+          <Route path="/passports" component={PassportsPage} />
+          <Route path="/loa" component={LoaPage} />
+          <Route path="/settings" component={SettingsPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </AppLayout>
+    </AuthGate>
   );
 }
 

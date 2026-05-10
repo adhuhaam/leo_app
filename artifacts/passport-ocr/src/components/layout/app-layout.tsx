@@ -8,8 +8,11 @@ import {
   Menu,
   X,
   Settings,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import { logout } from "@workspace/api-client-react";
 import leoLogo from "@assets/logo_1778407673714.png";
 
 const navItems = [
@@ -81,8 +84,8 @@ function SidebarNav({ onClose }: { onClose?: () => void }) {
           </div>
         ))}
       </nav>
-      {/* Footer — brand logo */}
-      <div className="border-t border-sidebar-border px-3 py-4">
+      {/* Footer — brand logo + logout */}
+      <div className="border-t border-sidebar-border px-3 py-4 space-y-2">
         <div className="rounded-lg bg-[#e8dec4] px-3 py-3 flex items-center justify-center">
           <img
             src={leoLogo}
@@ -90,8 +93,32 @@ function SidebarNav({ onClose }: { onClose?: () => void }) {
             className="w-full h-auto max-h-14 object-contain"
           />
         </div>
+        <LogoutButton />
       </div>
     </>
+  );
+}
+
+function LogoutButton() {
+  const qc = useQueryClient();
+  async function onClick() {
+    try {
+      await logout();
+    } catch {
+      // ignore — we still want to clear local state
+    }
+    await qc.invalidateQueries({ queryKey: ["/auth/me"] });
+    qc.clear();
+  }
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[12px] font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition"
+      data-testid="button-logout"
+    >
+      <LogOut className="h-3.5 w-3.5" />
+      Sign out
+    </button>
   );
 }
 

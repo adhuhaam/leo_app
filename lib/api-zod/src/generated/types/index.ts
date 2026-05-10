@@ -9,6 +9,7 @@
 export * from "./company";
 export * from "./companyInput";
 export * from "./companyUpdate";
+export * from "./getAuthStatus200";
 export * from "./healthStatus";
 export * from "./listCompaniesParams";
 export * from "./listLoaOptionsCategory";
@@ -21,6 +22,7 @@ export * from "./loaOptionCategory";
 export * from "./loaOptionInput";
 export * from "./loaOptionInputCategory";
 export * from "./loaUpdate";
+export * from "./loginInput";
 export * from "./passport";
 export * from "./passportStats";
 export * from "./passportStatus";

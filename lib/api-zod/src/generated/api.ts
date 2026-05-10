@@ -16,6 +16,21 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Returns current auth status
+ */
+export const GetAuthStatusResponse = zod.object({
+  authenticated: zod.boolean(),
+});
+
+/**
+ * @summary Log in with the shared password
+ */
+
+export const LoginBody = zod.object({
+  password: zod.string().min(1),
+});
+
+/**
  * @summary List all passport records
  */
 export const ListPassportsQueryParams = zod.object({

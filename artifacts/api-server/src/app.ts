@@ -3,8 +3,11 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { sessionMiddleware } from "./lib/session";
 
 const app: Express = express();
+// Replit's preview/published environments sit behind a TLS-terminating proxy.
+app.set("trust proxy", 1);
 
 app.use(
   pinoHttp({
@@ -25,9 +28,10 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(cors({ credentials: true }));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(sessionMiddleware);
 
 app.use("/api", router);
 
