@@ -5,7 +5,8 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
-- `pnpm --filter @workspace/passport-ocr run dev` — run the frontend (port varies)
+- `pnpm --filter @workspace/passport-ocr run dev` — run the web frontend (port varies)
+- `pnpm --filter @workspace/passport-ocr-mobile run dev` — run the Expo mobile app (Expo Go)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -33,6 +34,8 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 - `artifacts/api-server/src/routes/passports.ts` — Passport CRUD + upload routes
 - `artifacts/api-server/src/lib/ocr.ts` — OpenAI vision OCR extraction logic
 - `artifacts/passport-ocr/src/` — React frontend (pages, components)
+- `artifacts/passport-ocr-mobile/app/` — Expo mobile app (file-based routes; tabs: Dashboard, Master, Capture, Billing, More)
+- `artifacts/passport-ocr-mobile/lib/auth.tsx` — shared-password auth provider (cookie session, native persistence)
 
 ## Architecture decisions
 
@@ -44,6 +47,36 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 ## Product
 
 Users upload passport images (JPG, PNG, PDF) for Bangladesh and Indian passports. The app extracts: full name, passport number, date of birth, date of issue, date of expiry, address, and nationality. Extracted records are stored in PostgreSQL and displayed in a CRUD dashboard with search, filter, edit, and delete capabilities.
+
+## Mobile app
+
+The `passport-ocr-mobile` artifact is an Expo (React Native) client that reuses the same `/api` endpoints as the web dashboard. It signs in with the same shared password, persists the session cookie natively, and exposes:
+
+- **Dashboard** — passport stats, quick actions, recent uploads
+- **Master** — passport list with status/nationality filters and the latest-LOA company per candidate
+- **Capture** — camera + document picker upload to `/api/passports/upload` (multipart; field `file`)
+- **Billing** — invoices and quotations (view-only); detail view shows line items + GST totals
+- **More** — Clients (view-only), Expenses (CRUD), and Sign-out
+
+### Run locally
+- `pnpm --filter @workspace/passport-ocr-mobile run dev` — starts Metro/Expo. Open in Expo Go on a device on the same network, or scan the QR.
+- The app reads `EXPO_PUBLIC_DOMAIN` (set by the workflow) and points API calls at `https://${EXPO_PUBLIC_DOMAIN}` so it shares the proxied `/api` with the web app.
+
+### Build an Android APK (EAS)
+The repo already includes `artifacts/passport-ocr-mobile/eas.json` with a `preview` profile that emits an `.apk` (and a `production` profile for Play Store `.aab`).
+
+1. Install the CLI once: `npm i -g eas-cli`
+2. `cd artifacts/passport-ocr-mobile && eas login` (free Expo account).
+3. First time only: `eas init` — links the project to your Expo account and writes the `projectId`.
+4. Set the domain the APK should call (replaces the placeholder in `eas.json`):
+   ```bash
+   eas secret:create --scope project --name EXPO_PUBLIC_DOMAIN --value <your-replit-domain>
+   ```
+   …then either remove the `env.EXPO_PUBLIC_DOMAIN` line from `eas.json` (so the secret wins) or edit it to your domain directly.
+5. `eas build -p android --profile preview` — EAS builds in the cloud and returns a downloadable `.apk` URL when finished (~10–15 min).
+6. Side-load the APK on any Android device. Sign-in uses the same shared password as the web dashboard.
+
+For the Play Store, swap `--profile preview` → `--profile production` to get an `.aab`.
 
 ## User preferences
 

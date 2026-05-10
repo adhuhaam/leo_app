@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "Passport OCR",
+    "slug": "passport-ocr-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "passport-ocr-mobile",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fbf6ec"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.replit.passportocr",
+      "infoPlist": {
+        "NSCameraUsageDescription": "We use the camera to capture passport pages for OCR extraction.",
+        "NSPhotoLibraryUsageDescription": "We access your photo library so you can choose passport photos to upload.",
+        "NSDocumentsFolderUsageDescription": "We access documents so you can upload passport PDFs."
+      }
+    },
+    "android": {
+      "package": "com.replit.passportocr",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#fbf6ec"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow Passport OCR to access your camera to capture passports.",
+          "photosPermission": "Allow Passport OCR to access your photos to upload passport scans."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
