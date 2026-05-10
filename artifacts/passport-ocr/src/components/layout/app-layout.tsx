@@ -39,8 +39,7 @@ function BrandMark({ size = "default" }: { size?: "default" | "small" }) {
         <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-300 ring-2 ring-sidebar" />
       </div>
       <div className="flex flex-col leading-tight">
-        <span className={`${text} font-bold tracking-tight text-sidebar-foreground`}>LEO OS</span>
-        <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-sidebar-foreground/70">Employment</span>
+        <span className={`${text} font-bold tracking-tight text-black`}>LEO OS</span>
       </div>
     </div>
   );
