@@ -12,6 +12,10 @@ tags:
     description: Health operations
   - name: passports
     description: Passport OCR operations
+  - name: companies
+    description: Company management
+  - name: loa
+    description: Letter of Appointment operations
 paths:
   /healthz:
     get:
@@ -150,6 +154,173 @@ paths:
         "404":
           description: Not found
 
+  /companies:
+    get:
+      operationId: listCompanies
+      tags: [companies]
+      summary: List all companies
+      responses:
+        "200":
+          description: List of companies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Company"
+    post:
+      operationId: createCompany
+      tags: [companies]
+      summary: Create a company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyInput"
+      responses:
+        "201":
+          description: Created company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+
+  /companies/{id}:
+    patch:
+      operationId: updateCompany
+      tags: [companies]
+      summary: Update a company
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyUpdate"
+      responses:
+        "200":
+          description: Updated company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteCompany
+      tags: [companies]
+      summary: Delete a company
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /loa:
+    get:
+      operationId: listLoa
+      tags: [loa]
+      summary: List all LOA entries
+      responses:
+        "200":
+          description: List of LOA entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Loa"
+    post:
+      operationId: createLoa
+      tags: [loa]
+      summary: Create a LOA entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoaInput"
+      responses:
+        "201":
+          description: Created LOA
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loa"
+
+  /loa/{id}:
+    get:
+      operationId: getLoa
+      tags: [loa]
+      summary: Get a single LOA entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: LOA entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loa"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateLoa
+      tags: [loa]
+      summary: Update a LOA entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoaUpdate"
+      responses:
+        "200":
+          description: Updated LOA
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loa"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteLoa
+      tags: [loa]
+      summary: Delete a LOA entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
@@ -239,3 +410,228 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Passport"
+
+    Company:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    CompanyInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        email:
+          type: string
+        country:
+          type: string
+        registrationNumber:
+          type: string
+
+    CompanyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        email:
+          type: string
+        country:
+          type: string
+        registrationNumber:
+          type: string
+
+    Loa:
+      type: object
+      required: [id, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: ["integer", "null"]
+        passportId:
+          type: ["integer", "null"]
+        companyName:
+          type: ["string", "null"]
+        companyAddress:
+          type: ["string", "null"]
+        companyEmail:
+          type: ["string", "null"]
+        companyCountry:
+          type: ["string", "null"]
+        companyRegistrationNumber:
+          type: ["string", "null"]
+        candidateName:
+          type: ["string", "null"]
+        candidateAddress:
+          type: ["string", "null"]
+        candidateNationality:
+          type: ["string", "null"]
+        candidateDateOfBirth:
+          type: ["string", "null"]
+        candidatePassportNumber:
+          type: ["string", "null"]
+        candidateEmergencyContact:
+          type: ["string", "null"]
+        jobTitle:
+          type: ["string", "null"]
+        workType:
+          type: ["string", "null"]
+        basicSalary:
+          type: ["string", "null"]
+        salaryPaymentDate:
+          type: ["string", "null"]
+        workSite:
+          type: ["string", "null"]
+        dateOfCommence:
+          type: ["string", "null"]
+        jobDescription:
+          type: ["string", "null"]
+        workingHours:
+          type: ["string", "null"]
+        workStatus:
+          type: ["string", "null"]
+        contractDuration:
+          type: ["string", "null"]
+        signatoryName:
+          type: ["string", "null"]
+        signatoryDesignation:
+          type: ["string", "null"]
+        signatureDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    LoaInput:
+      type: object
+      properties:
+        companyId:
+          type: integer
+        passportId:
+          type: integer
+        companyName:
+          type: string
+        companyAddress:
+          type: string
+        companyEmail:
+          type: string
+        companyCountry:
+          type: string
+        companyRegistrationNumber:
+          type: string
+        candidateName:
+          type: string
+        candidateAddress:
+          type: string
+        candidateNationality:
+          type: string
+        candidateDateOfBirth:
+          type: string
+        candidatePassportNumber:
+          type: string
+        candidateEmergencyContact:
+          type: string
+        jobTitle:
+          type: string
+        workType:
+          type: string
+        basicSalary:
+          type: string
+        salaryPaymentDate:
+          type: string
+        workSite:
+          type: string
+        dateOfCommence:
+          type: string
+        jobDescription:
+          type: string
+        workingHours:
+          type: string
+        workStatus:
+          type: string
+        contractDuration:
+          type: string
+        signatoryName:
+          type: string
+        signatoryDesignation:
+          type: string
+        signatureDate:
+          type: string
+
+    LoaUpdate:
+      type: object
+      properties:
+        companyId:
+          type: integer
+        passportId:
+          type: integer
+        companyName:
+          type: string
+        companyAddress:
+          type: string
+        companyEmail:
+          type: string
+        companyCountry:
+          type: string
+        companyRegistrationNumber:
+          type: string
+        candidateName:
+          type: string
+        candidateAddress:
+          type: string
+        candidateNationality:
+          type: string
+        candidateDateOfBirth:
+          type: string
+        candidatePassportNumber:
+          type: string
+        candidateEmergencyContact:
+          type: string
+        jobTitle:
+          type: string
+        workType:
+          type: string
+        basicSalary:
+          type: string
+        salaryPaymentDate:
+          type: string
+        workSite:
+          type: string
+        dateOfCommence:
+          type: string
+        jobDescription:
+          type: string
+        workingHours:
+          type: string
+        workStatus:
+          type: string
+        contractDuration:
+          type: string
+        signatoryName:
+          type: string
+        signatoryDesignation:
+          type: string
+        signatureDate:
+          type: string

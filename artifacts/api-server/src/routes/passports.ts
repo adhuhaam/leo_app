@@ -10,7 +10,7 @@ import {
 } from "@workspace/api-zod";
 import { extractPassportData } from "../lib/ocr";
 import { logger } from "../lib/logger";
-import { fromFile } from "pdf2pic";
+import { fromPath } from "pdf2pic";
 import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
@@ -45,7 +45,7 @@ async function bufferToBase64Image(
     try {
       await fs.writeFile(tmpPdf, buffer);
 
-      const convert = fromFile(tmpPdf, {
+      const convert = fromPath(tmpPdf, {
         density: 200,
         saveFilename: "passport",
         savePath: tmpDir,

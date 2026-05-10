@@ -49,7 +49,7 @@ import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Passport } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Passport } from "@workspace/api-client-react";
 
 export default function PassportsPage() {
   const [search, setSearch] = useState("");

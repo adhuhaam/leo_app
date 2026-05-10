@@ -70,6 +70,153 @@ export interface PassportStats {
   recentUploads: Passport[];
 }
 
+export interface Company {
+  id: number;
+  name: string;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
+  registrationNumber?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CompanyInput {
+  name: string;
+  address?: string;
+  email?: string;
+  country?: string;
+  registrationNumber?: string;
+}
+
+export interface CompanyUpdate {
+  name?: string;
+  address?: string;
+  email?: string;
+  country?: string;
+  registrationNumber?: string;
+}
+
+export interface Loa {
+  id: number;
+  /** @nullable */
+  companyId?: number | null;
+  /** @nullable */
+  passportId?: number | null;
+  /** @nullable */
+  companyName?: string | null;
+  /** @nullable */
+  companyAddress?: string | null;
+  /** @nullable */
+  companyEmail?: string | null;
+  /** @nullable */
+  companyCountry?: string | null;
+  /** @nullable */
+  companyRegistrationNumber?: string | null;
+  /** @nullable */
+  candidateName?: string | null;
+  /** @nullable */
+  candidateAddress?: string | null;
+  /** @nullable */
+  candidateNationality?: string | null;
+  /** @nullable */
+  candidateDateOfBirth?: string | null;
+  /** @nullable */
+  candidatePassportNumber?: string | null;
+  /** @nullable */
+  candidateEmergencyContact?: string | null;
+  /** @nullable */
+  jobTitle?: string | null;
+  /** @nullable */
+  workType?: string | null;
+  /** @nullable */
+  basicSalary?: string | null;
+  /** @nullable */
+  salaryPaymentDate?: string | null;
+  /** @nullable */
+  workSite?: string | null;
+  /** @nullable */
+  dateOfCommence?: string | null;
+  /** @nullable */
+  jobDescription?: string | null;
+  /** @nullable */
+  workingHours?: string | null;
+  /** @nullable */
+  workStatus?: string | null;
+  /** @nullable */
+  contractDuration?: string | null;
+  /** @nullable */
+  signatoryName?: string | null;
+  /** @nullable */
+  signatoryDesignation?: string | null;
+  /** @nullable */
+  signatureDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoaInput {
+  companyId?: number;
+  passportId?: number;
+  companyName?: string;
+  companyAddress?: string;
+  companyEmail?: string;
+  companyCountry?: string;
+  companyRegistrationNumber?: string;
+  candidateName?: string;
+  candidateAddress?: string;
+  candidateNationality?: string;
+  candidateDateOfBirth?: string;
+  candidatePassportNumber?: string;
+  candidateEmergencyContact?: string;
+  jobTitle?: string;
+  workType?: string;
+  basicSalary?: string;
+  salaryPaymentDate?: string;
+  workSite?: string;
+  dateOfCommence?: string;
+  jobDescription?: string;
+  workingHours?: string;
+  workStatus?: string;
+  contractDuration?: string;
+  signatoryName?: string;
+  signatoryDesignation?: string;
+  signatureDate?: string;
+}
+
+export interface LoaUpdate {
+  companyId?: number;
+  passportId?: number;
+  companyName?: string;
+  companyAddress?: string;
+  companyEmail?: string;
+  companyCountry?: string;
+  companyRegistrationNumber?: string;
+  candidateName?: string;
+  candidateAddress?: string;
+  candidateNationality?: string;
+  candidateDateOfBirth?: string;
+  candidatePassportNumber?: string;
+  candidateEmergencyContact?: string;
+  jobTitle?: string;
+  workType?: string;
+  basicSalary?: string;
+  salaryPaymentDate?: string;
+  workSite?: string;
+  dateOfCommence?: string;
+  jobDescription?: string;
+  workingHours?: string;
+  workStatus?: string;
+  contractDuration?: string;
+  signatoryName?: string;
+  signatoryDesignation?: string;
+  signatureDate?: string;
+}
+
 export type ListPassportsParams = {
   search?: string;
   nationality?: string;

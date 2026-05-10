@@ -6,8 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./company";
+export * from "./companyInput";
+export * from "./companyUpdate";
 export * from "./healthStatus";
 export * from "./listPassportsParams";
+export * from "./loa";
+export * from "./loaInput";
+export * from "./loaUpdate";
 export * from "./passport";
 export * from "./passportStats";
 export * from "./passportStatus";

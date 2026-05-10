@@ -139,3 +139,244 @@ export const UpdatePassportResponse = zod.object({
 export const DeletePassportParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary List all companies
+ */
+export const ListCompaniesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  address: zod.string().nullish(),
+  email: zod.string().nullish(),
+  country: zod.string().nullish(),
+  registrationNumber: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListCompaniesResponse = zod.array(ListCompaniesResponseItem);
+
+/**
+ * @summary Create a company
+ */
+export const CreateCompanyBody = zod.object({
+  name: zod.string(),
+  address: zod.string().optional(),
+  email: zod.string().optional(),
+  country: zod.string().optional(),
+  registrationNumber: zod.string().optional(),
+});
+
+/**
+ * @summary Update a company
+ */
+export const UpdateCompanyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateCompanyBody = zod.object({
+  name: zod.string().optional(),
+  address: zod.string().optional(),
+  email: zod.string().optional(),
+  country: zod.string().optional(),
+  registrationNumber: zod.string().optional(),
+});
+
+export const UpdateCompanyResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  address: zod.string().nullish(),
+  email: zod.string().nullish(),
+  country: zod.string().nullish(),
+  registrationNumber: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a company
+ */
+export const DeleteCompanyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List all LOA entries
+ */
+export const ListLoaResponseItem = zod.object({
+  id: zod.number(),
+  companyId: zod.number().nullish(),
+  passportId: zod.number().nullish(),
+  companyName: zod.string().nullish(),
+  companyAddress: zod.string().nullish(),
+  companyEmail: zod.string().nullish(),
+  companyCountry: zod.string().nullish(),
+  companyRegistrationNumber: zod.string().nullish(),
+  candidateName: zod.string().nullish(),
+  candidateAddress: zod.string().nullish(),
+  candidateNationality: zod.string().nullish(),
+  candidateDateOfBirth: zod.string().nullish(),
+  candidatePassportNumber: zod.string().nullish(),
+  candidateEmergencyContact: zod.string().nullish(),
+  jobTitle: zod.string().nullish(),
+  workType: zod.string().nullish(),
+  basicSalary: zod.string().nullish(),
+  salaryPaymentDate: zod.string().nullish(),
+  workSite: zod.string().nullish(),
+  dateOfCommence: zod.string().nullish(),
+  jobDescription: zod.string().nullish(),
+  workingHours: zod.string().nullish(),
+  workStatus: zod.string().nullish(),
+  contractDuration: zod.string().nullish(),
+  signatoryName: zod.string().nullish(),
+  signatoryDesignation: zod.string().nullish(),
+  signatureDate: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListLoaResponse = zod.array(ListLoaResponseItem);
+
+/**
+ * @summary Create a LOA entry
+ */
+export const CreateLoaBody = zod.object({
+  companyId: zod.number().optional(),
+  passportId: zod.number().optional(),
+  companyName: zod.string().optional(),
+  companyAddress: zod.string().optional(),
+  companyEmail: zod.string().optional(),
+  companyCountry: zod.string().optional(),
+  companyRegistrationNumber: zod.string().optional(),
+  candidateName: zod.string().optional(),
+  candidateAddress: zod.string().optional(),
+  candidateNationality: zod.string().optional(),
+  candidateDateOfBirth: zod.string().optional(),
+  candidatePassportNumber: zod.string().optional(),
+  candidateEmergencyContact: zod.string().optional(),
+  jobTitle: zod.string().optional(),
+  workType: zod.string().optional(),
+  basicSalary: zod.string().optional(),
+  salaryPaymentDate: zod.string().optional(),
+  workSite: zod.string().optional(),
+  dateOfCommence: zod.string().optional(),
+  jobDescription: zod.string().optional(),
+  workingHours: zod.string().optional(),
+  workStatus: zod.string().optional(),
+  contractDuration: zod.string().optional(),
+  signatoryName: zod.string().optional(),
+  signatoryDesignation: zod.string().optional(),
+  signatureDate: zod.string().optional(),
+});
+
+/**
+ * @summary Get a single LOA entry
+ */
+export const GetLoaParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetLoaResponse = zod.object({
+  id: zod.number(),
+  companyId: zod.number().nullish(),
+  passportId: zod.number().nullish(),
+  companyName: zod.string().nullish(),
+  companyAddress: zod.string().nullish(),
+  companyEmail: zod.string().nullish(),
+  companyCountry: zod.string().nullish(),
+  companyRegistrationNumber: zod.string().nullish(),
+  candidateName: zod.string().nullish(),
+  candidateAddress: zod.string().nullish(),
+  candidateNationality: zod.string().nullish(),
+  candidateDateOfBirth: zod.string().nullish(),
+  candidatePassportNumber: zod.string().nullish(),
+  candidateEmergencyContact: zod.string().nullish(),
+  jobTitle: zod.string().nullish(),
+  workType: zod.string().nullish(),
+  basicSalary: zod.string().nullish(),
+  salaryPaymentDate: zod.string().nullish(),
+  workSite: zod.string().nullish(),
+  dateOfCommence: zod.string().nullish(),
+  jobDescription: zod.string().nullish(),
+  workingHours: zod.string().nullish(),
+  workStatus: zod.string().nullish(),
+  contractDuration: zod.string().nullish(),
+  signatoryName: zod.string().nullish(),
+  signatoryDesignation: zod.string().nullish(),
+  signatureDate: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update a LOA entry
+ */
+export const UpdateLoaParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateLoaBody = zod.object({
+  companyId: zod.number().optional(),
+  passportId: zod.number().optional(),
+  companyName: zod.string().optional(),
+  companyAddress: zod.string().optional(),
+  companyEmail: zod.string().optional(),
+  companyCountry: zod.string().optional(),
+  companyRegistrationNumber: zod.string().optional(),
+  candidateName: zod.string().optional(),
+  candidateAddress: zod.string().optional(),
+  candidateNationality: zod.string().optional(),
+  candidateDateOfBirth: zod.string().optional(),
+  candidatePassportNumber: zod.string().optional(),
+  candidateEmergencyContact: zod.string().optional(),
+  jobTitle: zod.string().optional(),
+  workType: zod.string().optional(),
+  basicSalary: zod.string().optional(),
+  salaryPaymentDate: zod.string().optional(),
+  workSite: zod.string().optional(),
+  dateOfCommence: zod.string().optional(),
+  jobDescription: zod.string().optional(),
+  workingHours: zod.string().optional(),
+  workStatus: zod.string().optional(),
+  contractDuration: zod.string().optional(),
+  signatoryName: zod.string().optional(),
+  signatoryDesignation: zod.string().optional(),
+  signatureDate: zod.string().optional(),
+});
+
+export const UpdateLoaResponse = zod.object({
+  id: zod.number(),
+  companyId: zod.number().nullish(),
+  passportId: zod.number().nullish(),
+  companyName: zod.string().nullish(),
+  companyAddress: zod.string().nullish(),
+  companyEmail: zod.string().nullish(),
+  companyCountry: zod.string().nullish(),
+  companyRegistrationNumber: zod.string().nullish(),
+  candidateName: zod.string().nullish(),
+  candidateAddress: zod.string().nullish(),
+  candidateNationality: zod.string().nullish(),
+  candidateDateOfBirth: zod.string().nullish(),
+  candidatePassportNumber: zod.string().nullish(),
+  candidateEmergencyContact: zod.string().nullish(),
+  jobTitle: zod.string().nullish(),
+  workType: zod.string().nullish(),
+  basicSalary: zod.string().nullish(),
+  salaryPaymentDate: zod.string().nullish(),
+  workSite: zod.string().nullish(),
+  dateOfCommence: zod.string().nullish(),
+  jobDescription: zod.string().nullish(),
+  workingHours: zod.string().nullish(),
+  workStatus: zod.string().nullish(),
+  contractDuration: zod.string().nullish(),
+  signatoryName: zod.string().nullish(),
+  signatoryDesignation: zod.string().nullish(),
+  signatureDate: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a LOA entry
+ */
+export const DeleteLoaParams = zod.object({
+  id: zod.coerce.number(),
+});

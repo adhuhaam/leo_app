@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ScanText, LayoutDashboard, UploadCloud, FileText, Menu, X } from "lucide-react";
+import { ScanText, LayoutDashboard, UploadCloud, FileText, FileSignature, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/upload", label: "Process Document", icon: UploadCloud },
   { href: "/passports", label: "Records", icon: FileText },
+  { href: "/loa", label: "LOA", icon: FileSignature },
 ];
 
 function SidebarNav({ onClose }: { onClose?: () => void }) {
