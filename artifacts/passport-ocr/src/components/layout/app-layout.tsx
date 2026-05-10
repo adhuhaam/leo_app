@@ -6,6 +6,7 @@ import {
   FileSignature,
   Users,
   Building,
+  Wallet,
   Menu,
   X,
   Settings,
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/master-list", label: "Master List", icon: Users, group: "Operations" },
   { href: "/clients", label: "Clients", icon: Building, group: "Operations" },
   { href: "/loa", label: "Letter of Appointment", icon: FileSignature, group: "Operations" },
+  { href: "/expenses", label: "Expenses", icon: Wallet, group: "Operations" },
   { href: "/settings", label: "Settings", icon: Settings, group: "System" },
 ];
 

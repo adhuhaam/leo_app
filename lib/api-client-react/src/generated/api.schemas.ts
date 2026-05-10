@@ -92,6 +92,59 @@ export interface ClientUpdate {
   notes?: string | null;
 }
 
+export interface ExpenseCategory {
+  id: number;
+  name: string;
+  /** @nullable */
+  color?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpenseCategoryInput {
+  /** @minLength 1 */
+  name: string;
+  color?: string;
+}
+
+export interface ExpenseCategoryUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @nullable */
+  color?: string | null;
+}
+
+export interface Expense {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  amount: string;
+  /** @nullable */
+  expenseDate?: string | null;
+  /** @nullable */
+  remarks?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpenseInput {
+  categoryId: number;
+  /** @minLength 1 */
+  amount: string;
+  expenseDate?: string;
+  remarks?: string;
+}
+
+export interface ExpenseUpdate {
+  categoryId?: number;
+  /** @minLength 1 */
+  amount?: string;
+  /** @nullable */
+  expenseDate?: string | null;
+  /** @nullable */
+  remarks?: string | null;
+}
+
 export type PassportStatus =
   (typeof PassportStatus)[keyof typeof PassportStatus];
 
@@ -374,6 +427,11 @@ export type ListCompaniesParams = {
 };
 
 export type ListClientsParams = {
+  search?: string;
+};
+
+export type ListExpensesParams = {
+  categoryId?: number;
   search?: string;
 };
 

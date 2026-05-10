@@ -570,6 +570,119 @@ export const DeleteClientParams = zod.object({
 });
 
 /**
+ * @summary List expense categories
+ */
+export const ListExpenseCategoriesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  color: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListExpenseCategoriesResponse = zod.array(
+  ListExpenseCategoriesResponseItem,
+);
+
+/**
+ * @summary Create an expense category
+ */
+
+export const CreateExpenseCategoryBody = zod.object({
+  name: zod.string().min(1),
+  color: zod.string().optional(),
+});
+
+/**
+ * @summary Update an expense category
+ */
+export const UpdateExpenseCategoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateExpenseCategoryBody = zod.object({
+  name: zod.string().min(1).optional(),
+  color: zod.string().nullish(),
+});
+
+export const UpdateExpenseCategoryResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  color: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete an expense category (refused if expenses still reference it)
+ */
+export const DeleteExpenseCategoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List expenses (newest first)
+ */
+export const ListExpensesQueryParams = zod.object({
+  categoryId: zod.coerce.number().optional(),
+  search: zod.coerce.string().optional(),
+});
+
+export const ListExpensesResponseItem = zod.object({
+  id: zod.number(),
+  categoryId: zod.number(),
+  categoryName: zod.string(),
+  amount: zod.string(),
+  expenseDate: zod.string().nullish(),
+  remarks: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListExpensesResponse = zod.array(ListExpensesResponseItem);
+
+/**
+ * @summary Create an expense
+ */
+
+export const CreateExpenseBody = zod.object({
+  categoryId: zod.number(),
+  amount: zod.string().min(1),
+  expenseDate: zod.string().optional(),
+  remarks: zod.string().optional(),
+});
+
+/**
+ * @summary Update an expense
+ */
+export const UpdateExpenseParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateExpenseBody = zod.object({
+  categoryId: zod.number().optional(),
+  amount: zod.string().min(1).optional(),
+  expenseDate: zod.string().nullish(),
+  remarks: zod.string().nullish(),
+});
+
+export const UpdateExpenseResponse = zod.object({
+  id: zod.number(),
+  categoryId: zod.number(),
+  categoryName: zod.string(),
+  amount: zod.string(),
+  expenseDate: zod.string().nullish(),
+  remarks: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete an expense
+ */
+export const DeleteExpenseParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary List LOA dropdown options
  */
 export const ListLoaOptionsQueryParams = zod.object({

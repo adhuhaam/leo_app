@@ -460,6 +460,173 @@ paths:
         "404":
           description: Not found
 
+  /expense-categories:
+    get:
+      operationId: listExpenseCategories
+      tags: [expenses]
+      summary: List expense categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpenseCategory"
+    post:
+      operationId: createExpenseCategory
+      tags: [expenses]
+      summary: Create an expense category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseCategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseCategory"
+        "409":
+          description: A category with this name already exists
+
+  /expense-categories/{id}:
+    patch:
+      operationId: updateExpenseCategory
+      tags: [expenses]
+      summary: Update an expense category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseCategoryUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseCategory"
+        "404":
+          description: Not found
+        "409":
+          description: Another category with this name already exists
+    delete:
+      operationId: deleteExpenseCategory
+      tags: [expenses]
+      summary: Delete an expense category (refused if expenses still reference it)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+        "409":
+          description: Category is in use by one or more expenses
+
+  /expenses:
+    get:
+      operationId: listExpenses
+      tags: [expenses]
+      summary: List expenses (newest first)
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of expenses with joined category name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Create an expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          description: Invalid input or unknown category
+
+  /expenses/{id}:
+    patch:
+      operationId: updateExpense
+      tags: [expenses]
+      summary: Update an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          description: Invalid input or unknown category
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      summary: Delete an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
   /loa-options:
     get:
       operationId: listLoaOptions
@@ -652,6 +819,89 @@ components:
         address:
           type: ["string", "null"]
         notes:
+          type: ["string", "null"]
+
+    ExpenseCategory:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        color:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ExpenseCategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: string
+
+    ExpenseCategoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        color:
+          type: ["string", "null"]
+
+    Expense:
+      type: object
+      required: [id, categoryId, categoryName, amount, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        # numeric(14,2) — sent as a string to preserve precision
+        amount:
+          type: string
+        expenseDate:
+          type: ["string", "null"]
+        remarks:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ExpenseInput:
+      type: object
+      required: [categoryId, amount]
+      properties:
+        categoryId:
+          type: integer
+        amount:
+          type: string
+          minLength: 1
+        expenseDate:
+          type: string
+        remarks:
+          type: string
+
+    ExpenseUpdate:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        amount:
+          type: string
+          minLength: 1
+        expenseDate:
+          type: ["string", "null"]
+        remarks:
           type: ["string", "null"]
 
     Passport:

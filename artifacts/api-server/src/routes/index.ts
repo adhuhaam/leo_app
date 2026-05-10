@@ -4,6 +4,8 @@ import authRouter, { requireAuth } from "./auth";
 import passportsRouter from "./passports";
 import companiesRouter from "./companies";
 import clientsRouter from "./clients";
+import expenseCategoriesRouter from "./expense-categories";
+import expensesRouter from "./expenses";
 import loaRouter from "./loa";
 import loaOptionsRouter from "./loa-options";
 
@@ -18,6 +20,8 @@ router.use(requireAuth);
 router.use(passportsRouter);
 router.use(companiesRouter);
 router.use(clientsRouter);
+router.use(expenseCategoriesRouter);
+router.use(expensesRouter);
 router.use(loaRouter);
 router.use(loaOptionsRouter);
 

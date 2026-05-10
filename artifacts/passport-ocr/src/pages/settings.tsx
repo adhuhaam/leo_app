@@ -9,10 +9,15 @@ import {
   useCreateCompany,
   useUpdateCompany,
   useDeleteCompany,
+  useListExpenseCategories,
+  useCreateExpenseCategory,
+  useUpdateExpenseCategory,
+  useDeleteExpenseCategory,
   getListLoaOptionsQueryKey,
   getListCompaniesQueryKey,
+  getListExpenseCategoriesQueryKey,
 } from "@workspace/api-client-react";
-import type { LoaOption, Company } from "@workspace/api-client-react";
+import type { LoaOption, Company, ExpenseCategory } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +36,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, ListChecks } from "lucide-react";
+import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, ListChecks, Wallet } from "lucide-react";
 
 type Category = "work_type" | "work_site" | "job_title";
 
@@ -87,7 +92,357 @@ export default function SettingsPage() {
 
       <CompaniesDetailsSection />
 
+      <ExpenseCategoriesSection />
+
       <LoaOptionsSection />
+    </div>
+  );
+}
+
+// ============================================================================
+// Expense Categories
+// ============================================================================
+
+// Tailwind-friendly preset palette for the colored category cards on the
+// Expenses page. Stored as a slug so we render it the same way everywhere.
+const CATEGORY_COLOR_OPTIONS: { slug: string; label: string; swatch: string }[] = [
+  { slug: "slate",   label: "Slate",   swatch: "bg-slate-700" },
+  { slug: "sky",     label: "Sky",     swatch: "bg-sky-500" },
+  { slug: "amber",   label: "Amber",   swatch: "bg-amber-400" },
+  { slug: "emerald", label: "Emerald", swatch: "bg-emerald-500" },
+  { slug: "rose",    label: "Rose",    swatch: "bg-rose-500" },
+  { slug: "violet",  label: "Violet",  swatch: "bg-violet-500" },
+  { slug: "indigo",  label: "Indigo",  swatch: "bg-indigo-500" },
+  { slug: "teal",    label: "Teal",    swatch: "bg-teal-500" },
+];
+
+function colorSwatch(slug: string | null | undefined): string {
+  return CATEGORY_COLOR_OPTIONS.find((o) => o.slug === slug)?.swatch ?? "bg-muted";
+}
+
+function ExpenseCategoriesSection() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: categories = [], isLoading } = useListExpenseCategories();
+  const createMutation = useCreateExpenseCategory();
+  const updateMutation = useUpdateExpenseCategory();
+  const deleteMutation = useDeleteExpenseCategory();
+
+  const [name, setName] = useState("");
+  const [color, setColor] = useState<string>("slate");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState<string>("slate");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: getListExpenseCategoriesQueryKey() });
+
+  const handleAdd = () => {
+    const v = name.trim();
+    if (!v) return;
+    createMutation.mutate(
+      { data: { name: v, color } },
+      {
+        onSuccess: () => {
+          setName("");
+          invalidate();
+          toast({ title: "Category added", description: v });
+        },
+        onError: (err: unknown) => {
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          toast({
+            title: status === 409 ? "Already exists" : "Failed to add",
+            description: status === 409 ? `"${v}" already exists.` : "Please try again.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
+  const startEdit = (c: ExpenseCategory) => {
+    setEditingId(c.id);
+    setEditName(c.name);
+    setEditColor(c.color ?? "slate");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName("");
+  };
+
+  const saveEdit = (c: ExpenseCategory) => {
+    const v = editName.trim();
+    if (!v) return;
+    const patch: { name?: string; color?: string | null } = {};
+    if (v !== c.name) patch.name = v;
+    if (editColor !== (c.color ?? "slate")) patch.color = editColor;
+    if (Object.keys(patch).length === 0) {
+      cancelEdit();
+      return;
+    }
+    updateMutation.mutate(
+      { id: c.id, data: patch },
+      {
+        onSuccess: () => {
+          invalidate();
+          cancelEdit();
+          toast({ title: "Category updated" });
+        },
+        onError: (err: unknown) => {
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          toast({
+            title: status === 409 ? "Name already exists" : "Failed to update",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
+  const handleDelete = (id: number) => {
+    deleteMutation.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          invalidate();
+          setConfirmDeleteId(null);
+          toast({ title: "Category removed" });
+        },
+        onError: (err: unknown) => {
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          toast({
+            title: status === 409 ? "Category in use" : "Failed to remove",
+            description:
+              status === 409
+                ? "Delete or reassign its expenses first."
+                : undefined,
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
+  const pendingDelete =
+    confirmDeleteId != null ? categories.find((c) => c.id === confirmDeleteId) : null;
+
+  return (
+    <div className="space-y-4 border-t border-border/60 pt-8">
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Wallet className="h-3.5 w-3.5 text-amber-500" />
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+            Expense Categories
+          </span>
+        </div>
+        <h2 className="text-xl font-semibold tracking-tight">Expense Categories</h2>
+        <p className="text-muted-foreground text-sm mt-1">
+          Categories shown as colored cards on the Expenses page (e.g.{" "}
+          <span className="font-medium">BIGAREY</span>,{" "}
+          <span className="font-medium">SUNA</span>,{" "}
+          <span className="font-medium">PRO EMPLOYMENT</span>).
+        </p>
+      </div>
+
+      <Card className="border-border/60 shadow-sm">
+        <CardContent className="p-5">
+          {/* Add row */}
+          <div className="flex flex-wrap items-end gap-2 mb-4">
+            <div className="flex-1 min-w-[160px] space-y-1.5">
+              <Label className="text-xs font-medium">Category name</Label>
+              <Input
+                placeholder="e.g. BIGAREY"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAdd();
+                  }
+                }}
+                data-testid="input-add-expense-category"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Color</Label>
+              <ColorPicker value={color} onChange={setColor} testId="add" />
+            </div>
+            <Button
+              onClick={handleAdd}
+              disabled={!name.trim() || createMutation.isPending}
+              data-testid="button-add-expense-category"
+            >
+              {createMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-1" />
+              )}
+              Add
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10" />
+              ))}
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="text-center py-8 text-xs text-muted-foreground border border-dashed border-border rounded-lg">
+              No categories yet. Add the first one above.
+            </div>
+          ) : (
+            <ul className="space-y-1.5">
+              {categories.map((c) => {
+                const isEditing = editingId === c.id;
+                return (
+                  <li
+                    key={c.id}
+                    className="group flex items-center gap-2 rounded-md border border-border/60 bg-card pl-3 pr-1.5 py-1.5"
+                    data-testid={`row-expense-category-${c.id}`}
+                  >
+                    {isEditing ? (
+                      <>
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              saveEdit(c);
+                            } else if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelEdit();
+                            }
+                          }}
+                          autoFocus
+                          className="h-8 text-sm flex-1"
+                          data-testid={`input-edit-category-${c.id}`}
+                        />
+                        <ColorPicker value={editColor} onChange={setEditColor} testId={`edit-${c.id}`} />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+                          onClick={() => saveEdit(c)}
+                          disabled={!editName.trim() || updateMutation.isPending}
+                          title="Save"
+                          data-testid={`button-save-category-${c.id}`}
+                        >
+                          {updateMutation.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground"
+                          onClick={cancelEdit}
+                          title="Cancel"
+                          data-testid={`button-cancel-edit-category-${c.id}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className={`inline-block h-3 w-3 rounded-full ${colorSwatch(c.color)}`}
+                          aria-hidden
+                        />
+                        <span className="truncate flex-1 text-sm font-medium">{c.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                          onClick={() => startEdit(c)}
+                          title="Edit"
+                          data-testid={`button-edit-category-${c.id}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                          onClick={() => setConfirmDeleteId(c.id)}
+                          disabled={deleteMutation.isPending}
+                          title="Remove"
+                          data-testid={`button-delete-category-${c.id}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={confirmDeleteId != null}
+        onOpenChange={(o) => !o && setConfirmDeleteId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove "{pendingDelete?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can only remove a category that has no expenses. Delete or reassign its
+              expenses first if you want to retire this category.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => confirmDeleteId != null && handleDelete(confirmDeleteId)}
+              data-testid={`button-confirm-delete-category-${confirmDeleteId}`}
+            >
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function ColorPicker({
+  value,
+  onChange,
+  testId,
+}: {
+  value: string;
+  onChange: (slug: string) => void;
+  testId: string;
+}) {
+  return (
+    <div className="flex items-center gap-1" data-testid={`color-picker-${testId}`}>
+      {CATEGORY_COLOR_OPTIONS.map((opt) => {
+        const active = opt.slug === value;
+        return (
+          <button
+            key={opt.slug}
+            type="button"
+            title={opt.label}
+            onClick={() => onChange(opt.slug)}
+            className={`h-6 w-6 rounded-full ${opt.swatch} transition ${
+              active
+                ? "ring-2 ring-offset-2 ring-foreground/70"
+                : "opacity-70 hover:opacity-100"
+            }`}
+            data-testid={`color-${testId}-${opt.slug}`}
+            aria-label={opt.label}
+          />
+        );
+      })}
     </div>
   );
 }

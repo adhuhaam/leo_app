@@ -22,3 +22,5 @@ export * from "./companies";
 export * from "./loa";
 export * from "./loa-options";
 export * from "./clients";
+export * from "./expense-categories";
+export * from "./expenses";
