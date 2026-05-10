@@ -1,44 +1,96 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ScanText, LayoutDashboard, UploadCloud, FileText, FileSignature, Menu, X } from "lucide-react";
+import {
+  LayoutDashboard,
+  UploadCloud,
+  FileText,
+  FileSignature,
+  Menu,
+  X,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/upload", label: "Process Document", icon: UploadCloud },
-  { href: "/passports", label: "Records", icon: FileText },
-  { href: "/loa", label: "LOA", icon: FileSignature },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
+  { href: "/upload", label: "Process Document", icon: UploadCloud, group: "Operations" },
+  { href: "/passports", label: "Records", icon: FileText, group: "Operations" },
+  { href: "/loa", label: "Letter of Appointment", icon: FileSignature, group: "Operations" },
 ];
+
+function BrandMark({ size = "default" }: { size?: "default" | "small" }) {
+  const dim = size === "small" ? "h-7 w-7" : "h-8 w-8";
+  const text = size === "small" ? "text-sm" : "text-base";
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className={`${dim} relative flex-shrink-0 rounded-lg bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-600 flex items-center justify-center shadow-[0_4px_12px_-2px_rgba(139,92,246,0.5)]`}>
+        <span className="font-extrabold text-white text-[11px] tracking-tighter">L</span>
+        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-sidebar" />
+      </div>
+      <div className="flex flex-col leading-tight">
+        <span className={`${text} font-bold tracking-tight text-sidebar-foreground`}>LEO OS</span>
+        <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-sidebar-foreground/70">Operations</span>
+      </div>
+    </div>
+  );
+}
 
 function SidebarNav({ onClose }: { onClose?: () => void }) {
   const [location] = useLocation();
+
+  const groups = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
+    (acc[item.group] ||= []).push(item);
+    return acc;
+  }, {});
+
   return (
     <>
-      <div className="flex items-center gap-2 px-4 py-5 border-b border-sidebar-border">
-        <ScanText className="h-5 w-5 text-primary flex-shrink-0" />
-        <span className="font-bold text-base tracking-tight text-sidebar-foreground">PassportOCR</span>
+      <div className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border">
+        <BrandMark />
       </div>
-      <nav className="flex-1 py-4">
-        <p className="px-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-sidebar-foreground/40">
-          Operations
-        </p>
-        {navItems.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            onClick={onClose}
-            className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors
-              ${location === href
-                ? "bg-sidebar-accent text-sidebar-primary"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              }`}
-            data-testid={`nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
-          >
-            <Icon className="h-4 w-4 flex-shrink-0" />
-            {label}
-          </Link>
+      <nav className="flex-1 py-3 overflow-y-auto">
+        {Object.entries(groups).map(([group, items]) => (
+          <div key={group} className="mb-4">
+            <p className="px-5 pb-2 text-[10px] font-mono uppercase tracking-[0.15em] text-sidebar-foreground/65">
+              {group}
+            </p>
+            {items.map(({ href, label, icon: Icon }) => {
+              const active = location === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onClose}
+                  className={`relative mx-2 flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-150
+                    ${active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/85 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+                    }`}
+                  data-testid={`nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-sidebar-primary" />
+                  )}
+                  <Icon className={`h-4 w-4 flex-shrink-0 ${active ? "text-sidebar-primary" : ""}`} />
+                  <span className="truncate">{label}</span>
+                </Link>
+              );
+            })}
+          </div>
         ))}
       </nav>
+      {/* Footer */}
+      <div className="border-t border-sidebar-border px-3 py-3">
+        <div className="flex items-center gap-2.5 rounded-lg bg-sidebar-accent/40 px-3 py-2.5">
+          <div className="h-7 w-7 flex-shrink-0 rounded-md bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+            <Sparkles className="h-3.5 w-3.5 text-white" />
+          </div>
+          <div className="flex flex-col leading-tight min-w-0">
+            <span className="text-[11px] font-semibold text-sidebar-foreground truncate">AI Vision</span>
+            <span className="text-[10px] text-sidebar-foreground/75 truncate">GPT powered OCR</span>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
@@ -47,30 +99,30 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex min-h-screen w-full bg-app-shell">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-56 flex-shrink-0 bg-sidebar border-r border-sidebar-border">
+      <aside className="hidden md:flex flex-col w-60 flex-shrink-0 bg-sidebar border-r border-sidebar-border">
         <SidebarNav />
       </aside>
 
       {/* Mobile sidebar overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Mobile sidebar drawer */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-56 bg-sidebar border-r border-sidebar-border flex flex-col
-          transform transition-transform duration-200 ease-in-out md:hidden
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-sidebar border-r border-sidebar-border flex flex-col
+          transform transition-transform duration-200 ease-out md:hidden
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-end px-3 pt-3">
           <button
             onClick={() => setMobileOpen(false)}
-            className="p-1.5 rounded text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            className="p-1.5 rounded text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition"
             data-testid="button-close-sidebar"
           >
             <X className="h-4 w-4" />
@@ -82,7 +134,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile top bar */}
-        <header className="flex md:hidden items-center gap-3 px-4 py-3 border-b border-border bg-background sticky top-0 z-30">
+        <header className="flex md:hidden items-center gap-3 px-4 py-3 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-30">
           <Button
             variant="ghost"
             size="icon"
@@ -92,13 +144,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <ScanText className="h-4 w-4 text-primary" />
-            <span className="font-bold text-sm tracking-tight">PassportOCR</span>
-          </div>
+          <BrandMark size="small" />
         </header>
 
-        <div className="flex-1 overflow-auto p-4 md:p-8">
+        <div className="flex-1 overflow-auto p-4 md:p-8 lg:p-10">
           {children}
         </div>
       </main>
