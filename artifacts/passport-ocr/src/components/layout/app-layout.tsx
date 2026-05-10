@@ -7,10 +7,10 @@ import {
   FileSignature,
   Menu,
   X,
-  Sparkles,
   Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import leoLogo from "@assets/logo_1778407673714.png";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
@@ -25,13 +25,13 @@ function BrandMark({ size = "default" }: { size?: "default" | "small" }) {
   const text = size === "small" ? "text-sm" : "text-base";
   return (
     <div className="flex items-center gap-2.5">
-      <div className={`${dim} relative flex-shrink-0 rounded-lg bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-600 flex items-center justify-center shadow-[0_4px_12px_-2px_rgba(139,92,246,0.5)]`}>
+      <div className={`${dim} relative flex-shrink-0 rounded-lg bg-gradient-to-br from-[hsl(162_45%_55%)] via-[hsl(165_40%_45%)] to-[hsl(170_35%_30%)] flex items-center justify-center shadow-[0_4px_12px_-2px_rgba(60,140,120,0.5)]`}>
         <span className="font-extrabold text-white text-[11px] tracking-tighter">L</span>
-        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-sidebar" />
+        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-300 ring-2 ring-sidebar" />
       </div>
       <div className="flex flex-col leading-tight">
         <span className={`${text} font-bold tracking-tight text-sidebar-foreground`}>LEO OS</span>
-        <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-sidebar-foreground/70">Operations</span>
+        <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-sidebar-foreground/70">Employment</span>
       </div>
     </div>
   );
@@ -81,16 +81,14 @@ function SidebarNav({ onClose }: { onClose?: () => void }) {
           </div>
         ))}
       </nav>
-      {/* Footer */}
-      <div className="border-t border-sidebar-border px-3 py-3">
-        <div className="flex items-center gap-2.5 rounded-lg bg-sidebar-accent/40 px-3 py-2.5">
-          <div className="h-7 w-7 flex-shrink-0 rounded-md bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-            <Sparkles className="h-3.5 w-3.5 text-white" />
-          </div>
-          <div className="flex flex-col leading-tight min-w-0">
-            <span className="text-[11px] font-semibold text-sidebar-foreground truncate">AI Vision</span>
-            <span className="text-[10px] text-sidebar-foreground/75 truncate">GPT powered OCR</span>
-          </div>
+      {/* Footer — brand logo */}
+      <div className="border-t border-sidebar-border px-3 py-4">
+        <div className="rounded-lg bg-[#e8dec4] px-3 py-3 flex items-center justify-center">
+          <img
+            src={leoLogo}
+            alt="LEO Employment Services"
+            className="w-full h-auto max-h-14 object-contain"
+          />
         </div>
       </div>
     </>
