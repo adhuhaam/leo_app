@@ -35,6 +35,7 @@ import type {
   PassportStats,
   PassportUpdate,
   PassportUpload,
+  UpdateLoaOptionInput,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1803,6 +1804,93 @@ export const useCreateLoaOption = <
   TContext
 > => {
   return useMutation(getCreateLoaOptionMutationOptions(options));
+};
+
+/**
+ * @summary Rename a LOA dropdown option
+ */
+export const getUpdateLoaOptionUrl = (id: number) => {
+  return `/api/loa-options/${id}`;
+};
+
+export const updateLoaOption = async (
+  id: number,
+  updateLoaOptionInput: UpdateLoaOptionInput,
+  options?: RequestInit,
+): Promise<LoaOption> => {
+  return customFetch<LoaOption>(getUpdateLoaOptionUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateLoaOptionInput),
+  });
+};
+
+export const getUpdateLoaOptionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLoaOption>>,
+    TError,
+    { id: number; data: BodyType<UpdateLoaOptionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateLoaOption>>,
+  TError,
+  { id: number; data: BodyType<UpdateLoaOptionInput> },
+  TContext
+> => {
+  const mutationKey = ["updateLoaOption"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateLoaOption>>,
+    { id: number; data: BodyType<UpdateLoaOptionInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateLoaOption(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateLoaOptionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateLoaOption>>
+>;
+export type UpdateLoaOptionMutationBody = BodyType<UpdateLoaOptionInput>;
+export type UpdateLoaOptionMutationError = ErrorType<void>;
+
+/**
+ * @summary Rename a LOA dropdown option
+ */
+export const useUpdateLoaOption = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLoaOption>>,
+    TError,
+    { id: number; data: BodyType<UpdateLoaOptionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateLoaOption>>,
+  TError,
+  { id: number; data: BodyType<UpdateLoaOptionInput> },
+  TContext
+> => {
+  return useMutation(getUpdateLoaOptionMutationOptions(options));
 };
 
 /**

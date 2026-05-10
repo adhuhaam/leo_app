@@ -28,3 +28,4 @@ export * from "./passportStats";
 export * from "./passportStatus";
 export * from "./passportUpdate";
 export * from "./passportUpload";
+export * from "./updateLoaOptionInput";

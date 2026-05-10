@@ -45,6 +45,11 @@ export interface LoaOptionInput {
   value: string;
 }
 
+export interface UpdateLoaOptionInput {
+  /** @minLength 1 */
+  value: string;
+}
+
 export type PassportStatus =
   (typeof PassportStatus)[keyof typeof PassportStatus];
 

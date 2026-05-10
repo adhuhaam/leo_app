@@ -5,6 +5,8 @@ import {
   ListLoaOptionsQueryParams,
   CreateLoaOptionBody,
   DeleteLoaOptionParams,
+  UpdateLoaOptionParams,
+  UpdateLoaOptionBody,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -71,6 +73,65 @@ router.post("/loa-options", async (req, res): Promise<void> => {
     }
     req.log.error({ err }, "Failed to create LOA option");
     res.status(500).json({ error: "Failed to create option" });
+  }
+});
+
+router.patch("/loa-options/:id", async (req, res): Promise<void> => {
+  const params = UpdateLoaOptionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const body = UpdateLoaOptionBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const value = body.data.value.trim();
+  if (!value) {
+    res.status(400).json({ error: "Value cannot be empty" });
+    return;
+  }
+
+  const [current] = await db
+    .select()
+    .from(loaOptionsTable)
+    .where(eq(loaOptionsTable.id, params.data.id));
+  if (!current) {
+    res.status(404).json({ error: "Option not found" });
+    return;
+  }
+
+  // Check for duplicates within the same category, excluding this row
+  const dup = await db
+    .select()
+    .from(loaOptionsTable)
+    .where(
+      and(
+        eq(loaOptionsTable.category, current.category),
+        sql`lower(${loaOptionsTable.value}) = lower(${value})`,
+        sql`${loaOptionsTable.id} <> ${params.data.id}`
+      )
+    );
+  if (dup.length > 0) {
+    res.status(409).json({ error: "Another option with this value already exists" });
+    return;
+  }
+
+  try {
+    const [row] = await db
+      .update(loaOptionsTable)
+      .set({ value })
+      .where(eq(loaOptionsTable.id, params.data.id))
+      .returning();
+    res.json(row);
+  } catch (err) {
+    if ((err as { code?: string })?.code === "23505") {
+      res.status(409).json({ error: "Another option with this value already exists" });
+      return;
+    }
+    req.log.error({ err }, "Failed to update LOA option");
+    res.status(500).json({ error: "Failed to update option" });
   }
 });
 

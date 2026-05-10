@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListLoaOptions,
   useCreateLoaOption,
+  useUpdateLoaOption,
   useDeleteLoaOption,
   useListCompanies,
   useCreateCompany,
@@ -30,7 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2 } from "lucide-react";
+import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, ListChecks } from "lucide-react";
 
 type Category = "work_type" | "work_site" | "job_title";
 
@@ -86,11 +87,7 @@ export default function SettingsPage() {
 
       <CompaniesDetailsSection />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {LISTS.map((cfg) => (
-          <OptionList key={cfg.category} cfg={cfg} />
-        ))}
-      </div>
+      <LoaOptionsSection />
 
       <CompaniesBrandingSection />
     </div>
@@ -837,14 +834,40 @@ function ImageSlot({
   );
 }
 
+function LoaOptionsSection() {
+  return (
+    <div className="space-y-4 border-t border-border/60 pt-8">
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <ListChecks className="h-3.5 w-3.5 text-violet-500" />
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">LOA Dropdown Options</span>
+        </div>
+        <h2 className="text-xl font-semibold tracking-tight">Job Titles, Work Types &amp; Work Sites</h2>
+        <p className="text-muted-foreground text-sm mt-1">
+          Add, rename, or delete the values that appear as dropdowns when generating a Letter of Appointment.
+        </p>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {LISTS.map((cfg) => (
+          <OptionList key={cfg.category} cfg={cfg} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function OptionList({ cfg }: { cfg: ListConfig }) {
   const Icon = cfg.icon;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [value, setValue] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const { data: options = [], isLoading } = useListLoaOptions({ category: cfg.category });
   const createMutation = useCreateLoaOption();
+  const updateMutation = useUpdateLoaOption();
   const deleteMutation = useDeleteLoaOption();
 
   const invalidate = () =>
@@ -873,18 +896,59 @@ function OptionList({ cfg }: { cfg: ListConfig }) {
     );
   };
 
-  const handleDelete = (opt: LoaOption) => {
-    deleteMutation.mutate(
-      { id: opt.id },
+  const startEdit = (opt: LoaOption) => {
+    setEditingId(opt.id);
+    setEditValue(opt.value);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const saveEdit = (opt: LoaOption) => {
+    const v = editValue.trim();
+    if (!v) return;
+    if (v === opt.value) {
+      cancelEdit();
+      return;
+    }
+    updateMutation.mutate(
+      { id: opt.id, data: { value: v } },
       {
         onSuccess: () => {
           invalidate();
-          toast({ title: "Removed", description: `Removed "${opt.value}".` });
+          cancelEdit();
+          toast({ title: "Updated", description: `Renamed to "${v}".` });
+        },
+        onError: (err: unknown) => {
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          toast({
+            title: status === 409 ? "Already exists" : "Failed to update",
+            description: status === 409 ? `"${v}" is already in this list.` : "Please try again.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
+  const handleDelete = (id: number) => {
+    const opt = options.find((o) => o.id === id);
+    deleteMutation.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          invalidate();
+          setConfirmDeleteId(null);
+          if (opt) toast({ title: "Removed", description: `Removed "${opt.value}".` });
         },
         onError: () => toast({ title: "Failed to remove", variant: "destructive" }),
       }
     );
   };
+
+  const pendingDelete = confirmDeleteId != null ? options.find((o) => o.id === confirmDeleteId) : null;
 
   return (
     <Card className="border-border/60 shadow-sm overflow-hidden flex flex-col">
@@ -894,8 +958,13 @@ function OptionList({ cfg }: { cfg: ListConfig }) {
           <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${cfg.accent} flex items-center justify-center shadow-sm flex-shrink-0`}>
             <Icon className="h-5 w-5 text-white" />
           </div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold tracking-tight">{cfg.title}</h3>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold tracking-tight">{cfg.title}</h3>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                {options.length}
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5">{cfg.description}</p>
           </div>
         </div>
@@ -936,34 +1005,116 @@ function OptionList({ cfg }: { cfg: ListConfig }) {
             </div>
           ) : (
             <ul className="space-y-1.5">
-              {options.map((opt) => (
-                <li
-                  key={opt.id}
-                  className="group flex items-center justify-between gap-2 rounded-md border border-border/60 bg-card px-3 py-2 text-sm hover:border-primary/40 transition-colors"
-                  data-testid={`row-option-${cfg.category}-${opt.id}`}
-                >
-                  <span className="truncate">{opt.value}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleDelete(opt)}
-                    disabled={deleteMutation.isPending}
-                    title="Remove"
-                    data-testid={`button-delete-option-${opt.id}`}
+              {options.map((opt) => {
+                const isEditing = editingId === opt.id;
+                return (
+                  <li
+                    key={opt.id}
+                    className="group flex items-center gap-2 rounded-md border border-border/60 bg-card pl-3 pr-1.5 py-1 text-sm hover:border-primary/40 transition-colors"
+                    data-testid={`row-option-${cfg.category}-${opt.id}`}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </li>
-              ))}
+                    {isEditing ? (
+                      <>
+                        <Input
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              saveEdit(opt);
+                            } else if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelEdit();
+                            }
+                          }}
+                          autoFocus
+                          className="h-7 text-sm"
+                          data-testid={`input-edit-option-${opt.id}`}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+                          onClick={() => saveEdit(opt)}
+                          disabled={!editValue.trim() || updateMutation.isPending}
+                          title="Save"
+                          data-testid={`button-save-option-${opt.id}`}
+                        >
+                          {updateMutation.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          onClick={cancelEdit}
+                          title="Cancel"
+                          data-testid={`button-cancel-edit-option-${opt.id}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="truncate flex-1 py-1">{opt.value}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                          onClick={() => startEdit(opt)}
+                          title="Rename"
+                          data-testid={`button-edit-option-${opt.id}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                          onClick={() => setConfirmDeleteId(opt.id)}
+                          disabled={deleteMutation.isPending}
+                          title="Remove"
+                          data-testid={`button-delete-option-${opt.id}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
-
-        <p className="text-[10px] text-muted-foreground mt-3 pt-3 border-t border-border/60">
-          {options.length} {options.length === 1 ? "item" : "items"}
-        </p>
       </CardContent>
+
+      <AlertDialog
+        open={confirmDeleteId != null}
+        onOpenChange={(o) => !o && setConfirmDeleteId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this {cfg.title.toLowerCase().replace(/s$/, "")}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes <strong>"{pendingDelete?.value}"</strong> from {cfg.title}. Letters of
+              Appointment already generated with this value are unaffected — they keep their snapshot.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => confirmDeleteId != null && handleDelete(confirmDeleteId)}
+              data-testid={`button-confirm-delete-option-${confirmDeleteId}`}
+            >
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

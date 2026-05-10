@@ -416,6 +416,33 @@ paths:
           description: Option already exists in this category
 
   /loa-options/{id}:
+    patch:
+      operationId: updateLoaOption
+      tags: [loa-options]
+      summary: Rename a LOA dropdown option
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLoaOptionInput"
+      responses:
+        "200":
+          description: Updated option
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoaOption"
+        "404":
+          description: Not found
+        "409":
+          description: Another option with this value already exists in this category
     delete:
       operationId: deleteLoaOption
       tags: [loa-options]
@@ -471,6 +498,14 @@ components:
         category:
           type: string
           enum: [work_type, work_site, job_title]
+        value:
+          type: string
+          minLength: 1
+
+    UpdateLoaOptionInput:
+      type: object
+      required: [value]
+      properties:
         value:
           type: string
           minLength: 1

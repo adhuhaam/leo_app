@@ -478,6 +478,24 @@ export const CreateLoaOptionBody = zod.object({
 });
 
 /**
+ * @summary Rename a LOA dropdown option
+ */
+export const UpdateLoaOptionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateLoaOptionBody = zod.object({
+  value: zod.string().min(1),
+});
+
+export const UpdateLoaOptionResponse = zod.object({
+  id: zod.number(),
+  category: zod.enum(["work_type", "work_site", "job_title"]),
+  value: zod.string(),
+  createdAt: zod.string(),
+});
+
+/**
  * @summary Delete a LOA dropdown option
  */
 export const DeleteLoaOptionParams = zod.object({
