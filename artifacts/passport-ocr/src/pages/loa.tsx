@@ -190,14 +190,24 @@ function StepOne({
         <Label className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> Candidate (Employee)</Label>
         <Select value={form.passportId} onValueChange={(v) => setForm({ ...form, passportId: v })}>
           <SelectTrigger data-testid="select-candidate">
-            <SelectValue placeholder="Select a candidate..." />
+            <SelectValue placeholder={passports.length === 0 ? "No passport records yet — upload one first" : "Select a candidate..."} />
           </SelectTrigger>
           <SelectContent>
-            {passports.filter((p) => p.status === "completed" && p.fullName).map((p) => (
-              <SelectItem key={p.id} value={String(p.id)} data-testid={`option-candidate-${p.id}`}>
-                {p.fullName} — {p.passportNumber}
-              </SelectItem>
-            ))}
+            {passports.length === 0 && (
+              <div className="px-2 py-3 text-xs text-muted-foreground">
+                No passport records found. Upload a passport first from the "Process Document" page.
+              </div>
+            )}
+            {passports.map((p) => {
+              const label = p.fullName || `(unnamed)`;
+              const num = p.passportNumber ? ` — ${p.passportNumber}` : "";
+              const status = p.status !== "completed" ? ` [${p.status}]` : "";
+              return (
+                <SelectItem key={p.id} value={String(p.id)} data-testid={`option-candidate-${p.id}`}>
+                  {label}{num}{status}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
         {selectedPassport && (
