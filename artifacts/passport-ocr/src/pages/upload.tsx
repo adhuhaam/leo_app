@@ -74,10 +74,7 @@ export default function UploadPage() {
   const handleUpload = () => {
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
-    uploadMutation.mutate({ data: formData as any }, {
+    uploadMutation.mutate({ data: { file: file } }, {
       onSuccess: (data) => {
         toast({
           title: "Upload successful",

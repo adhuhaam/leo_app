@@ -12,14 +12,26 @@ export interface ExtractedPassportData {
 }
 
 const EXTRACTION_PROMPT = `You are a passport OCR expert specializing in Bangladesh and Indian passports.
-Extract the following fields from the passport image:
-- Full Name (as printed on the passport)
-- Passport Number
-- Date of Birth (in DD/MM/YYYY or YYYY-MM-DD format)
-- Date of Issue (in DD/MM/YYYY or YYYY-MM-DD format)
-- Date of Expiry (in DD/MM/YYYY or YYYY-MM-DD format)
-- Address (permanent address if visible)
-- Nationality (must be one of: "bangladesh" or "india" based on the passport)
+
+For BANGLADESH passports:
+- The main data page shows: Surname + Given Name (combine as full name), Passport Number (e.g. B00779387), Date of Birth (e.g. 05 MAR 1988), Date of Issue (e.g. 30 APR 2023), Date of Expiry (e.g. 29 APR 2033)
+- The personal data page (back page) shows: Name, Permanent Address
+- Nationality field will say "BANGLADESHI" — map this to "bangladesh"
+- Passport number starts with a letter then digits (e.g. B00779387, EH0789603)
+
+For INDIAN passports:
+- Surname + Given Name on data page (combine as full name)
+- Passport Number starts with a letter then 7 digits
+- Nationality field will say "INDIAN" — map this to "india"
+
+Extract these fields from whichever page(s) are visible in the image:
+- Full Name: combine Surname and Given Name (e.g. "MD JUBAER HOSSAIN")
+- Passport Number: the passport document number
+- Date of Birth: standardize to DD MMM YYYY or DD/MM/YYYY as found
+- Date of Issue: standardize to DD MMM YYYY or DD/MM/YYYY as found
+- Date of Expiry: standardize to DD MMM YYYY or DD/MM/YYYY as found
+- Address: permanent address from personal data page, or place of birth if address not visible
+- Nationality: MUST be exactly "bangladesh" or "india" (lowercase)
 
 Respond ONLY with a valid JSON object in this exact format:
 {
@@ -29,7 +41,7 @@ Respond ONLY with a valid JSON object in this exact format:
   "dateOfIssue": "...",
   "dateOfExpiry": "...",
   "address": "...",
-  "nationality": "bangladesh" or "india"
+  "nationality": "bangladesh"
 }
 
 If a field is not visible or cannot be determined, use null for that field.

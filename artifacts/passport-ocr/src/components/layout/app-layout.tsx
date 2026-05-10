@@ -1,80 +1,106 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
-import { ScanText, LayoutDashboard, UploadCloud, FileText } from "lucide-react";
+import { ScanText, LayoutDashboard, UploadCloud, FileText, Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export function AppSidebar() {
+const navItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/upload", label: "Process Document", icon: UploadCloud },
+  { href: "/passports", label: "Records", icon: FileText },
+];
+
+function SidebarNav({ onClose }: { onClose?: () => void }) {
   const [location] = useLocation();
-
   return (
-    <Sidebar className="border-r border-sidebar-border bg-sidebar">
-      <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2 text-sidebar-foreground">
-          <ScanText className="h-6 w-6 text-primary" />
-          <span className="font-bold text-lg tracking-tight">PassportOCR</span>
-        </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs font-mono uppercase tracking-wider">
-            Operations
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/"}>
-                  <Link href="/" className="text-sidebar-foreground">
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/upload"}>
-                  <Link href="/upload" className="text-sidebar-foreground">
-                    <UploadCloud className="h-4 w-4" />
-                    <span>Process Document</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/passports"}>
-                  <Link href="/passports" className="text-sidebar-foreground">
-                    <FileText className="h-4 w-4" />
-                    <span>Records</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+    <>
+      <div className="flex items-center gap-2 px-4 py-5 border-b border-sidebar-border">
+        <ScanText className="h-5 w-5 text-primary flex-shrink-0" />
+        <span className="font-bold text-base tracking-tight text-sidebar-foreground">PassportOCR</span>
+      </div>
+      <nav className="flex-1 py-4">
+        <p className="px-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-sidebar-foreground/40">
+          Operations
+        </p>
+        {navItems.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            onClick={onClose}
+            className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors
+              ${location === href
+                ? "bg-sidebar-accent text-sidebar-primary"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              }`}
+            data-testid={`nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
+          >
+            <Icon className="h-4 w-4 flex-shrink-0" />
+            {label}
+          </Link>
+        ))}
+      </nav>
+    </>
   );
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
-        <AppSidebar />
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <div className="flex-1 overflow-auto p-6 md:p-8">
-            {children}
+    <div className="flex min-h-screen w-full bg-background">
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex flex-col w-56 flex-shrink-0 bg-sidebar border-r border-sidebar-border">
+        <SidebarNav />
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar drawer */}
+      <aside
+        className={`fixed top-0 left-0 z-50 h-full w-56 bg-sidebar border-r border-sidebar-border flex flex-col
+          transform transition-transform duration-200 ease-in-out md:hidden
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="flex items-center justify-end px-3 pt-3">
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="p-1.5 rounded text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            data-testid="button-close-sidebar"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <SidebarNav onClose={() => setMobileOpen(false)} />
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Mobile top bar */}
+        <header className="flex md:hidden items-center gap-3 px-4 py-3 border-b border-border bg-background sticky top-0 z-30">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setMobileOpen(true)}
+            data-testid="button-open-sidebar"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <ScanText className="h-4 w-4 text-primary" />
+            <span className="font-bold text-sm tracking-tight">PassportOCR</span>
           </div>
-        </main>
-      </div>
-    </SidebarProvider>
+        </header>
+
+        <div className="flex-1 overflow-auto p-4 md:p-8">
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }
