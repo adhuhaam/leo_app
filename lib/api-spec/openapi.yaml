@@ -20,6 +20,8 @@ tags:
     description: Letter of Appointment operations
   - name: loa-options
     description: Reusable dropdown options for LOA form (work types, work sites, job titles)
+  - name: clients
+    description: Client / placement management (where candidates are allocated)
 paths:
   /healthz:
     get:
@@ -94,6 +96,11 @@ paths:
             type: string
         - name: status
           in: query
+          schema:
+            type: string
+        - name: clientId
+          in: query
+          description: Filter by allocated client. Pass `none` for unallocated candidates.
           schema:
             type: string
       responses:
@@ -374,6 +381,85 @@ paths:
         "404":
           description: Not found
 
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List all clients
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  /clients/{id}:
+    patch:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete a client (also unlinks any allocated candidates)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
   /loa-options:
     get:
       operationId: listLoaOptions
@@ -510,6 +596,64 @@ components:
           type: string
           minLength: 1
 
+    Client:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        contactPerson:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ClientInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        contactPerson:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        notes:
+          type: string
+
+    ClientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        contactPerson:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
     Passport:
       type: object
       required: [id, status, createdAt, updatedAt]
@@ -537,6 +681,16 @@ components:
         errorMessage:
           type: ["string", "null"]
         originalFilename:
+          type: ["string", "null"]
+        clientId:
+          type: ["integer", "null"]
+          description: ID of the client the candidate is allocated to.
+        clientName:
+          type: ["string", "null"]
+          description: Joined client name for display (computed; ignored on writes).
+        workPermitNumber:
+          type: ["string", "null"]
+        agent:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -568,6 +722,12 @@ components:
           type: string
         nationality:
           type: string
+        clientId:
+          type: ["integer", "null"]
+        workPermitNumber:
+          type: ["string", "null"]
+        agent:
+          type: ["string", "null"]
 
     PassportStats:
       type: object

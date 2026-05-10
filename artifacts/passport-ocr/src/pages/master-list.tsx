@@ -3,6 +3,7 @@ import {
   useListPassports,
   useListLoa,
   useListCompanies,
+  useListClients,
   useDeletePassport,
   useUpdatePassport,
   getListPassportsQueryKey,
@@ -47,8 +48,8 @@ import { Search, Filter, MoreHorizontal, Pencil, Trash2, Loader2, Users, X } fro
 
 type StatusFilter = "all" | "completed" | "processing" | "failed";
 type NationalityFilter = "all" | "bangladesh" | "india";
-// "" = all, "none" = candidates without any LOA
-type CompanyFilter = string;
+// "all" / "none" / "<company-id>" / "client:<client-id>"
+type AllocationFilter = string;
 
 interface Row {
   passport: Passport;
@@ -61,7 +62,8 @@ export default function MasterListPage() {
   const [search, setSearch] = useState("");
   const [nationalityFilter, setNationalityFilter] = useState<NationalityFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [companyFilter, setCompanyFilter] = useState<CompanyFilter>("all");
+  // Combined filter: by allocated client OR by LOA-issuing company.
+  const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>("all");
 
   const [editPassport, setEditPassport] = useState<Passport | null>(null);
   const [deletePassportId, setDeletePassportId] = useState<number | null>(null);
@@ -69,18 +71,24 @@ export default function MasterListPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Use server-side filters for the cheap fields. Company filter is computed
-  // client-side because the company link only lives on the LOA snapshot.
+  // Server-side filters for the cheap fields + clientId. Company filter (LOA-derived)
+  // stays client-side because the company link only lives on the LOA snapshot.
   const passportParams = {
     ...(search ? { search } : {}),
     ...(nationalityFilter !== "all" ? { nationality: nationalityFilter } : {}),
     ...(statusFilter !== "all" ? { status: statusFilter } : {}),
+    ...(allocationFilter.startsWith("client:")
+      ? { clientId: allocationFilter.slice("client:".length) }
+      : allocationFilter === "unallocated"
+        ? { clientId: "none" }
+        : {}),
   };
   const { data: passports = [], isLoading } = useListPassports(passportParams, {
     query: { queryKey: getListPassportsQueryKey(passportParams) },
   });
   const { data: loas = [] } = useListLoa();
   const { data: companies = [] } = useListCompanies();
+  const { data: clients = [] } = useListClients();
 
   // Build a passport → most-recent-LOA map. LOAs are returned newest-first.
   const latestLoaByPassport = useMemo(() => {
@@ -114,23 +122,27 @@ export default function MasterListPage() {
   }, [passports, latestLoaByPassport]);
 
   const filteredRows = useMemo(() => {
-    if (companyFilter === "all") return rows;
-    if (companyFilter === "none") return rows.filter((r) => r.companyId == null);
-    const id = Number(companyFilter);
-    return rows.filter((r) => r.companyId === id);
-  }, [rows, companyFilter]);
+    // Server already handled "client:*" / "unallocated". Only the LOA-company
+    // filter ("company:N" / "no-loa") needs to run client-side here.
+    if (allocationFilter === "no-loa") return rows.filter((r) => r.companyId == null);
+    if (allocationFilter.startsWith("company:")) {
+      const id = Number(allocationFilter.slice("company:".length));
+      return rows.filter((r) => r.companyId === id);
+    }
+    return rows;
+  }, [rows, allocationFilter]);
 
   const activeFilterCount =
     (search ? 1 : 0) +
     (nationalityFilter !== "all" ? 1 : 0) +
     (statusFilter !== "all" ? 1 : 0) +
-    (companyFilter !== "all" ? 1 : 0);
+    (allocationFilter !== "all" ? 1 : 0);
 
   const clearFilters = () => {
     setSearch("");
     setNationalityFilter("all");
     setStatusFilter("all");
-    setCompanyFilter("all");
+    setAllocationFilter("all");
   };
 
   const deleteMutation = useDeletePassport();
@@ -157,10 +169,10 @@ export default function MasterListPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
             <Users className="h-6 w-6 text-primary" />
-            Master List
+            Master List &amp; Records
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            All candidates across every company. Search, filter, edit, or remove records.
+            Every candidate in the system — passport details, allocation, work permit, agent. Search, filter, edit, or remove.
           </p>
         </div>
         <div className="flex gap-4 text-sm">
@@ -186,16 +198,32 @@ export default function MasterListPage() {
                 />
               </div>
               <div className="grid grid-cols-2 md:flex gap-2">
-                <Select value={companyFilter} onValueChange={setCompanyFilter}>
-                  <SelectTrigger className="md:w-[200px]" data-testid="select-company-filter">
+                <Select value={allocationFilter} onValueChange={setAllocationFilter}>
+                  <SelectTrigger className="md:w-[220px]" data-testid="select-allocation-filter">
                     <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Company" />
+                    <SelectValue placeholder="Allocation / Company" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Companies</SelectItem>
-                    <SelectItem value="none">— No company yet —</SelectItem>
+                    <SelectItem value="all">All allocations</SelectItem>
+                    <SelectItem value="unallocated">— Unallocated —</SelectItem>
+                    {clients.length > 0 && (
+                      <div className="px-2 pt-2 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                        Clients (allocation)
+                      </div>
+                    )}
+                    {clients.map((c) => (
+                      <SelectItem key={`client-${c.id}`} value={`client:${c.id}`}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                    {companies.length > 0 && (
+                      <div className="px-2 pt-2 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                        Companies (LOA)
+                      </div>
+                    )}
+                    <SelectItem value="no-loa">— No LOA yet —</SelectItem>
                     {companies.map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
+                      <SelectItem key={`company-${c.id}`} value={`company:${c.id}`}>
                         {c.name}
                       </SelectItem>
                     ))}
@@ -248,9 +276,11 @@ export default function MasterListPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Passport #</TableHead>
                   <TableHead className="hidden md:table-cell">Nationality</TableHead>
-                  <TableHead className="hidden lg:table-cell">DOB</TableHead>
-                  <TableHead className="hidden lg:table-cell">Expiry</TableHead>
-                  <TableHead>Company</TableHead>
+                  <TableHead className="hidden xl:table-cell">Expiry</TableHead>
+                  <TableHead>Allocation</TableHead>
+                  <TableHead className="hidden lg:table-cell">Work Permit #</TableHead>
+                  <TableHead className="hidden lg:table-cell">Agent</TableHead>
+                  <TableHead className="hidden md:table-cell">LOA Company</TableHead>
                   <TableHead className="hidden sm:table-cell text-center">LOAs</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[60px]"></TableHead>
@@ -260,7 +290,7 @@ export default function MasterListPage() {
                 {isLoading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 9 }).map((_, j) => (
+                      {Array.from({ length: 11 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-5 w-20 bg-muted animate-pulse rounded" />
                         </TableCell>
@@ -269,7 +299,7 @@ export default function MasterListPage() {
                   ))
                 ) : filteredRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
                       {passports.length === 0
                         ? "No candidates yet — upload a passport from the Process Document page."
                         : "No candidates match your filters."}
@@ -281,17 +311,29 @@ export default function MasterListPage() {
                       <TableCell className="font-medium uppercase">{passport.fullName || "—"}</TableCell>
                       <TableCell className="font-mono text-xs">{passport.passportNumber || "—"}</TableCell>
                       <TableCell className="capitalize hidden md:table-cell">{passport.nationality || "—"}</TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                        {passport.dateOfBirth || "—"}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                      <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">
                         {passport.dateOfExpiry || "—"}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {companyName ? (
-                          <span className="truncate max-w-[180px] inline-block">{companyName}</span>
+                        {passport.clientName ? (
+                          <span className="truncate max-w-[160px] inline-block font-medium">
+                            {passport.clientName}
+                          </span>
                         ) : (
-                          <span className="text-muted-foreground italic text-xs">— None —</span>
+                          <span className="text-muted-foreground italic text-xs">— Unallocated —</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell font-mono text-xs">
+                        {passport.workPermitNumber || <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                        {passport.agent || "—"}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">
+                        {companyName ? (
+                          <span className="truncate max-w-[160px] inline-block">{companyName}</span>
+                        ) : (
+                          <span className="text-muted-foreground italic text-xs">— No LOA —</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-center">
@@ -403,7 +445,9 @@ function EditCandidateDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateMutation = useUpdatePassport();
+  const { data: clients = [] } = useListClients();
 
+  // "" sentinel for "Unallocated" — we translate to null on save.
   const [form, setForm] = useState({
     fullName: passport.fullName || "",
     passportNumber: passport.passportNumber || "",
@@ -412,12 +456,22 @@ function EditCandidateDialog({
     dateOfIssue: passport.dateOfIssue || "",
     dateOfExpiry: passport.dateOfExpiry || "",
     address: passport.address || "",
+    clientId: passport.clientId != null ? String(passport.clientId) : "",
+    workPermitNumber: passport.workPermitNumber || "",
+    agent: passport.agent || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const { clientId, workPermitNumber, agent, ...rest } = form;
+    const payload = {
+      ...rest,
+      clientId: clientId === "" ? null : Number(clientId),
+      workPermitNumber: workPermitNumber.trim() ? workPermitNumber.trim() : null,
+      agent: agent.trim() ? agent.trim() : null,
+    };
     updateMutation.mutate(
-      { id: passport.id, data: form },
+      { id: passport.id, data: payload },
       {
         onSuccess: () => {
           toast({ title: "Candidate updated" });
@@ -431,81 +485,135 @@ function EditCandidateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Candidate</DialogTitle>
-          <DialogDescription>Update the candidate's passport details.</DialogDescription>
+          <DialogDescription>Update the candidate&apos;s passport details, allocation, and operational fields.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5 col-span-2">
-              <Label>Full Name</Label>
-              <Input
-                value={form.fullName}
-                onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                className="uppercase font-mono"
-                data-testid="input-edit-fullname"
-              />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Passport details */}
+          <div className="space-y-3">
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Passport</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Full Name</Label>
+                <Input
+                  value={form.fullName}
+                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                  className="uppercase font-mono"
+                  data-testid="input-edit-fullname"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Passport Number</Label>
+                <Input
+                  value={form.passportNumber}
+                  onChange={(e) => setForm({ ...form, passportNumber: e.target.value })}
+                  className="uppercase font-mono"
+                  data-testid="input-edit-passport-number"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Nationality</Label>
+                <Select
+                  value={form.nationality}
+                  onValueChange={(v) => setForm({ ...form, nationality: v })}
+                >
+                  <SelectTrigger data-testid="select-edit-nationality">
+                    <SelectValue placeholder="Select nationality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bangladesh">Bangladesh</SelectItem>
+                    <SelectItem value="india">India</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Date of Birth</Label>
+                <Input
+                  value={form.dateOfBirth}
+                  onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
+                  placeholder="YYYY-MM-DD or DD/MM/YYYY"
+                  data-testid="input-edit-dob"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Date of Issue</Label>
+                <Input
+                  value={form.dateOfIssue}
+                  onChange={(e) => setForm({ ...form, dateOfIssue: e.target.value })}
+                  placeholder="YYYY-MM-DD or DD/MM/YYYY"
+                  data-testid="input-edit-issue"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Date of Expiry</Label>
+                <Input
+                  value={form.dateOfExpiry}
+                  onChange={(e) => setForm({ ...form, dateOfExpiry: e.target.value })}
+                  placeholder="YYYY-MM-DD or DD/MM/YYYY"
+                  data-testid="input-edit-expiry"
+                />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Address</Label>
+                <Input
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  data-testid="input-edit-address"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Passport Number</Label>
-              <Input
-                value={form.passportNumber}
-                onChange={(e) => setForm({ ...form, passportNumber: e.target.value })}
-                className="uppercase font-mono"
-                data-testid="input-edit-passport-number"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Nationality</Label>
-              <Select
-                value={form.nationality}
-                onValueChange={(v) => setForm({ ...form, nationality: v })}
-              >
-                <SelectTrigger data-testid="select-edit-nationality">
-                  <SelectValue placeholder="Select nationality" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bangladesh">Bangladesh</SelectItem>
-                  <SelectItem value="india">India</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Date of Birth</Label>
-              <Input
-                value={form.dateOfBirth}
-                onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
-                placeholder="YYYY-MM-DD or DD/MM/YYYY"
-                data-testid="input-edit-dob"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Date of Issue</Label>
-              <Input
-                value={form.dateOfIssue}
-                onChange={(e) => setForm({ ...form, dateOfIssue: e.target.value })}
-                placeholder="YYYY-MM-DD or DD/MM/YYYY"
-                data-testid="input-edit-issue"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Date of Expiry</Label>
-              <Input
-                value={form.dateOfExpiry}
-                onChange={(e) => setForm({ ...form, dateOfExpiry: e.target.value })}
-                placeholder="YYYY-MM-DD or DD/MM/YYYY"
-                data-testid="input-edit-expiry"
-              />
-            </div>
-            <div className="space-y-1.5 col-span-2">
-              <Label>Address</Label>
-              <Input
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                data-testid="input-edit-address"
-              />
+          </div>
+
+          {/* Allocation / placement */}
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Allocation</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Allocation (Client)</Label>
+                <Select
+                  value={form.clientId === "" ? "__none__" : form.clientId}
+                  onValueChange={(v) =>
+                    setForm({ ...form, clientId: v === "__none__" ? "" : v })
+                  }
+                >
+                  <SelectTrigger data-testid="select-edit-client">
+                    <SelectValue placeholder="Where is this candidate allocated?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Unallocated —</SelectItem>
+                    {clients.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {clients.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    No clients yet — add one from the Clients page first.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Work Permit Number</Label>
+                <Input
+                  value={form.workPermitNumber}
+                  onChange={(e) => setForm({ ...form, workPermitNumber: e.target.value })}
+                  className="font-mono"
+                  data-testid="input-edit-work-permit"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Agent</Label>
+                <Input
+                  value={form.agent}
+                  onChange={(e) => setForm({ ...form, agent: e.target.value })}
+                  data-testid="input-edit-agent"
+                />
+              </div>
             </div>
           </div>
 

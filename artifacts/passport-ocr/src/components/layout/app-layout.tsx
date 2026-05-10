@@ -3,9 +3,9 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
   UploadCloud,
-  FileText,
   FileSignature,
   Users,
+  Building,
   Menu,
   X,
   Settings,
@@ -19,8 +19,8 @@ import leoLogo from "@assets/image_1778408412841.png";
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
   { href: "/upload", label: "Process Document", icon: UploadCloud, group: "Operations" },
-  { href: "/passports", label: "Records", icon: FileText, group: "Operations" },
   { href: "/master-list", label: "Master List", icon: Users, group: "Operations" },
+  { href: "/clients", label: "Clients", icon: Building, group: "Operations" },
   { href: "/loa", label: "Letter of Appointment", icon: FileSignature, group: "Operations" },
   { href: "/settings", label: "Settings", icon: Settings, group: "System" },
 ];

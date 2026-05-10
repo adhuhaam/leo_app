@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
-import { eq, sql, desc } from "drizzle-orm";
-import { db, passportsTable } from "@workspace/db";
+import { eq, sql, desc, isNull } from "drizzle-orm";
+import { db, passportsTable, clientsTable } from "@workspace/db";
 import {
   GetPassportParams,
   UpdatePassportParams,
@@ -84,9 +84,7 @@ router.get("/passports", async (req, res): Promise<void> => {
     return;
   }
 
-  const { search, nationality, status } = parsed.data;
-
-  let query = db.select().from(passportsTable);
+  const { search, nationality, status, clientId } = parsed.data;
 
   const conditions = [];
   if (nationality) {
@@ -95,20 +93,50 @@ router.get("/passports", async (req, res): Promise<void> => {
   if (status) {
     conditions.push(eq(passportsTable.status, status));
   }
+  if (clientId === "none") {
+    conditions.push(isNull(passportsTable.clientId));
+  } else if (clientId) {
+    const n = Number(clientId);
+    if (!Number.isNaN(n)) conditions.push(eq(passportsTable.clientId, n));
+  }
 
+  // Left-join clients so each row carries clientName for display.
   const results = await db
-    .select()
+    .select({
+      id: passportsTable.id,
+      fullName: passportsTable.fullName,
+      passportNumber: passportsTable.passportNumber,
+      dateOfBirth: passportsTable.dateOfBirth,
+      dateOfIssue: passportsTable.dateOfIssue,
+      dateOfExpiry: passportsTable.dateOfExpiry,
+      address: passportsTable.address,
+      nationality: passportsTable.nationality,
+      status: passportsTable.status,
+      errorMessage: passportsTable.errorMessage,
+      originalFilename: passportsTable.originalFilename,
+      clientId: passportsTable.clientId,
+      clientName: clientsTable.name,
+      workPermitNumber: passportsTable.workPermitNumber,
+      agent: passportsTable.agent,
+      createdAt: passportsTable.createdAt,
+      updatedAt: passportsTable.updatedAt,
+    })
     .from(passportsTable)
+    .leftJoin(clientsTable, eq(passportsTable.clientId, clientsTable.id))
     .where(conditions.length > 0 ? sql`${conditions.reduce((a, b) => sql`${a} AND ${b}`)}` : undefined)
     .orderBy(desc(passportsTable.createdAt));
 
-  // Apply search filter in memory (name and passport number)
+  // Apply search filter in memory (name, passport number, work permit, agent).
   const filtered = search
-    ? results.filter(
-        (p) =>
-          p.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-          p.passportNumber?.toLowerCase().includes(search.toLowerCase())
-      )
+    ? results.filter((p) => {
+        const q = search.toLowerCase();
+        return (
+          p.fullName?.toLowerCase().includes(q) ||
+          p.passportNumber?.toLowerCase().includes(q) ||
+          p.workPermitNumber?.toLowerCase().includes(q) ||
+          p.agent?.toLowerCase().includes(q)
+        );
+      })
     : results;
 
   res.json(filtered);
@@ -212,6 +240,18 @@ router.patch("/passports/:id", async (req, res): Promise<void> => {
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
     return;
+  }
+
+  // Validate clientId points to an existing client (or null to clear).
+  if (body.data.clientId != null) {
+    const [exists] = await db
+      .select({ id: clientsTable.id })
+      .from(clientsTable)
+      .where(eq(clientsTable.id, body.data.clientId));
+    if (!exists) {
+      res.status(400).json({ error: "Allocation client does not exist" });
+      return;
+    }
   }
 
   const [passport] = await db

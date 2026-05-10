@@ -7,8 +7,8 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { AuthGate } from "@/components/auth-gate";
 import Dashboard from "@/pages/dashboard";
 import UploadPage from "@/pages/upload";
-import PassportsPage from "@/pages/passports";
 import MasterListPage from "@/pages/master-list";
+import ClientsPage from "@/pages/clients";
 import LoaPage from "@/pages/loa";
 import SettingsPage from "@/pages/settings";
 
@@ -21,8 +21,10 @@ function Router() {
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/upload" component={UploadPage} />
-          <Route path="/passports" component={PassportsPage} />
+          {/* /passports kept as an alias so old bookmarks land on the merged page */}
+          <Route path="/passports" component={MasterListPage} />
           <Route path="/master-list" component={MasterListPage} />
+          <Route path="/clients" component={ClientsPage} />
           <Route path="/loa" component={LoaPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route component={NotFound} />

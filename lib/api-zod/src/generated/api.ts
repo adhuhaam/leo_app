@@ -37,6 +37,12 @@ export const ListPassportsQueryParams = zod.object({
   search: zod.coerce.string().optional(),
   nationality: zod.coerce.string().optional(),
   status: zod.coerce.string().optional(),
+  clientId: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "Filter by allocated client. Pass `none` for unallocated candidates.",
+    ),
 });
 
 export const ListPassportsResponseItem = zod.object({
@@ -51,6 +57,16 @@ export const ListPassportsResponseItem = zod.object({
   status: zod.enum(["processing", "completed", "failed"]),
   errorMessage: zod.string().nullish(),
   originalFilename: zod.string().nullish(),
+  clientId: zod
+    .number()
+    .nullish()
+    .describe("ID of the client the candidate is allocated to."),
+  clientName: zod
+    .string()
+    .nullish()
+    .describe("Joined client name for display (computed; ignored on writes)."),
+  workPermitNumber: zod.string().nullish(),
+  agent: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -86,6 +102,18 @@ export const GetPassportStatsResponse = zod.object({
       status: zod.enum(["processing", "completed", "failed"]),
       errorMessage: zod.string().nullish(),
       originalFilename: zod.string().nullish(),
+      clientId: zod
+        .number()
+        .nullish()
+        .describe("ID of the client the candidate is allocated to."),
+      clientName: zod
+        .string()
+        .nullish()
+        .describe(
+          "Joined client name for display (computed; ignored on writes).",
+        ),
+      workPermitNumber: zod.string().nullish(),
+      agent: zod.string().nullish(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -111,6 +139,16 @@ export const GetPassportResponse = zod.object({
   status: zod.enum(["processing", "completed", "failed"]),
   errorMessage: zod.string().nullish(),
   originalFilename: zod.string().nullish(),
+  clientId: zod
+    .number()
+    .nullish()
+    .describe("ID of the client the candidate is allocated to."),
+  clientName: zod
+    .string()
+    .nullish()
+    .describe("Joined client name for display (computed; ignored on writes)."),
+  workPermitNumber: zod.string().nullish(),
+  agent: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -130,6 +168,9 @@ export const UpdatePassportBody = zod.object({
   dateOfExpiry: zod.string().optional(),
   address: zod.string().optional(),
   nationality: zod.string().optional(),
+  clientId: zod.number().nullish(),
+  workPermitNumber: zod.string().nullish(),
+  agent: zod.string().nullish(),
 });
 
 export const UpdatePassportResponse = zod.object({
@@ -144,6 +185,16 @@ export const UpdatePassportResponse = zod.object({
   status: zod.enum(["processing", "completed", "failed"]),
   errorMessage: zod.string().nullish(),
   originalFilename: zod.string().nullish(),
+  clientId: zod
+    .number()
+    .nullish()
+    .describe("ID of the client the candidate is allocated to."),
+  clientName: zod
+    .string()
+    .nullish()
+    .describe("Joined client name for display (computed; ignored on writes)."),
+  workPermitNumber: zod.string().nullish(),
+  agent: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -447,6 +498,74 @@ export const UpdateLoaResponse = zod.object({
  * @summary Delete a LOA entry
  */
 export const DeleteLoaParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List all clients
+ */
+export const ListClientsQueryParams = zod.object({
+  search: zod.coerce.string().optional(),
+});
+
+export const ListClientsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  contactPerson: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListClientsResponse = zod.array(ListClientsResponseItem);
+
+/**
+ * @summary Create a client
+ */
+
+export const CreateClientBody = zod.object({
+  name: zod.string().min(1),
+  contactPerson: zod.string().optional(),
+  phone: zod.string().optional(),
+  email: zod.string().optional(),
+  address: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Update a client
+ */
+export const UpdateClientParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateClientBody = zod.object({
+  name: zod.string().min(1).optional(),
+  contactPerson: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const UpdateClientResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  contactPerson: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a client (also unlinks any allocated candidates)
+ */
+export const DeleteClientParams = zod.object({
   id: zod.coerce.number(),
 });
 

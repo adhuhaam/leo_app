@@ -6,11 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./client";
+export * from "./clientInput";
+export * from "./clientUpdate";
 export * from "./company";
 export * from "./companyInput";
 export * from "./companyUpdate";
 export * from "./getAuthStatus200";
 export * from "./healthStatus";
+export * from "./listClientsParams";
 export * from "./listCompaniesParams";
 export * from "./listLoaOptionsCategory";
 export * from "./listLoaOptionsParams";

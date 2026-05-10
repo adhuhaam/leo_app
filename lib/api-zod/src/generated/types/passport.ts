@@ -31,6 +31,20 @@ export interface Passport {
   errorMessage?: string | null;
   /** @nullable */
   originalFilename?: string | null;
+  /**
+   * ID of the client the candidate is allocated to.
+   * @nullable
+   */
+  clientId?: number | null;
+  /**
+   * Joined client name for display (computed; ignored on writes).
+   * @nullable
+   */
+  clientName?: string | null;
+  /** @nullable */
+  workPermitNumber?: string | null;
+  /** @nullable */
+  agent?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -14,4 +14,10 @@ export interface PassportUpdate {
   dateOfExpiry?: string;
   address?: string;
   nationality?: string;
+  /** @nullable */
+  clientId?: number | null;
+  /** @nullable */
+  workPermitNumber?: string | null;
+  /** @nullable */
+  agent?: string | null;
 }

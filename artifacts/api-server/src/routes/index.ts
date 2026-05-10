@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import authRouter, { requireAuth } from "./auth";
 import passportsRouter from "./passports";
 import companiesRouter from "./companies";
+import clientsRouter from "./clients";
 import loaRouter from "./loa";
 import loaOptionsRouter from "./loa-options";
 
@@ -16,6 +17,7 @@ router.use(authRouter);
 router.use(requireAuth);
 router.use(passportsRouter);
 router.use(companiesRouter);
+router.use(clientsRouter);
 router.use(loaRouter);
 router.use(loaOptionsRouter);
 

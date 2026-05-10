@@ -50,6 +50,48 @@ export interface UpdateLoaOptionInput {
   value: string;
 }
 
+export interface Client {
+  id: number;
+  name: string;
+  /** @nullable */
+  contactPerson?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientInput {
+  /** @minLength 1 */
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+}
+
+export interface ClientUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @nullable */
+  contactPerson?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export type PassportStatus =
   (typeof PassportStatus)[keyof typeof PassportStatus];
 
@@ -83,6 +125,20 @@ export interface Passport {
   errorMessage?: string | null;
   /** @nullable */
   originalFilename?: string | null;
+  /**
+   * ID of the client the candidate is allocated to.
+   * @nullable
+   */
+  clientId?: number | null;
+  /**
+   * Joined client name for display (computed; ignored on writes).
+   * @nullable
+   */
+  clientName?: string | null;
+  /** @nullable */
+  workPermitNumber?: string | null;
+  /** @nullable */
+  agent?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -99,6 +155,12 @@ export interface PassportUpdate {
   dateOfExpiry?: string;
   address?: string;
   nationality?: string;
+  /** @nullable */
+  clientId?: number | null;
+  /** @nullable */
+  workPermitNumber?: string | null;
+  /** @nullable */
+  agent?: string | null;
 }
 
 export interface PassportStats {
@@ -298,6 +360,10 @@ export type ListPassportsParams = {
   search?: string;
   nationality?: string;
   status?: string;
+  /**
+   * Filter by allocated client. Pass `none` for unallocated candidates.
+   */
+  clientId?: string;
 };
 
 export type ListCompaniesParams = {
@@ -305,6 +371,10 @@ export type ListCompaniesParams = {
    * When true, include letterheadImage and signatureImage (heavy base64 fields). Defaults to false.
    */
   withBranding?: boolean;
+};
+
+export type ListClientsParams = {
+  search?: string;
 };
 
 export type ListLoaOptionsParams = {
