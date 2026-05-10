@@ -106,35 +106,41 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
   );
   doc.pipe(res);
 
-  const PAGE_W = 595.28 - 120; // usable width (margin 60 each side)
-  const LEFT = 60;
-
-  // ─── Title ───────────────────────────────────────────────────────────────
+  // ─── Title (centered letterhead) ─────────────────────────────────────────
   doc
     .font("Helvetica-Bold")
     .fontSize(14)
     .text("LETTER OF APPOINTMENT", { align: "center" })
     .moveDown(1.5);
 
-  // ─── Helper functions ─────────────────────────────────────────────────────
-  const sectionHeader = (num: string, title: string) => {
-    doc.font("Helvetica-Bold").fontSize(11).text(`${num}. ${title}`).moveDown(0.4);
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  const sectionHeader = (label: string) => {
+    doc.font("Helvetica-Bold").fontSize(11).text(label, { align: "left" }).moveDown(0.3);
   };
 
+  // Field renders as `Label: value` — empty value leaves only the label and colon
+  // (matches the sample exactly, no underscores or placeholders).
   const field = (label: string, value: string | null | undefined) => {
-    const val = value?.trim() || "";
+    const val = (value ?? "").trim();
     doc
       .font("Helvetica-Bold")
       .fontSize(10)
       .text(`${label}: `, { continued: true })
       .font("Helvetica")
-      .text(val || "________________________");
+      .text(val);
   };
 
-  const lineGap = () => doc.moveDown(0.3);
+  const lineGap = () => doc.moveDown(0.25);
 
-  // ─── Section 1: Employer ─────────────────────────────────────────────────
-  sectionHeader("1", "Details of Employer;");
+  // Format dates as DD/MM/YYYY when ISO-like, otherwise pass through.
+  const fmtDate = (v: string | null | undefined) => {
+    const s = (v ?? "").trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+  };
+
+  // ─── 1. Employer ──────────────────────────────────────────────────────────
+  sectionHeader("1. Details of Employer;");
   field("Name", loa.companyName); lineGap();
   field("Address", loa.companyAddress); lineGap();
   field("Contact Details / Email address", loa.companyEmail); lineGap();
@@ -142,40 +148,49 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
   field("Registration Number/ID Card", loa.companyRegistrationNumber);
   doc.moveDown(1);
 
-  // ─── Section 2: Employee ─────────────────────────────────────────────────
-  sectionHeader("2", "Details of Employee;");
+  // ─── 2. Employee ──────────────────────────────────────────────────────────
+  sectionHeader("2. Details of Employee;");
   field("Name", loa.candidateName); lineGap();
   field("Permanent Address", loa.candidateAddress); lineGap();
   field("Nationality", loa.candidateNationality); lineGap();
-  field("Date of Birth", loa.candidateDateOfBirth); lineGap();
+  field("Date of Birth", fmtDate(loa.candidateDateOfBirth)); lineGap();
   field("Passport Number", loa.candidatePassportNumber); lineGap();
   field("Emergency Contact Details (name and contact number)", loa.candidateEmergencyContact);
   doc.moveDown(1);
 
-  // ─── Section 3: Employment ───────────────────────────────────────────────
-  sectionHeader("3", "Details of Employment;");
+  // ─── 4. Employment (sample skips section 3) ──────────────────────────────
+  sectionHeader("4. Details of Employment;");
   field("Job Title / Occupation", loa.jobTitle); lineGap();
-  field("Work Type", loa.workType); lineGap();
+  // Note the literal `Work Type :` with a space before the colon — matches sample.
+  doc.font("Helvetica-Bold").fontSize(10).text("Work Type : ", { continued: true })
+    .font("Helvetica").text((loa.workType ?? "").trim()); lineGap();
   field("Basic Salary (USD)", loa.basicSalary); lineGap();
-  field("Date of Salary payment", loa.salaryPaymentDate); lineGap();
+  field("Date of Salary payment", loa.salaryPaymentDate);
+  doc.moveDown(0.8); // blank line before "Work site:" as in the sample
   field("Work site", loa.workSite); lineGap();
-  field("Date of Commence", loa.dateOfCommence || "Date of Arrival"); lineGap();
-  field("Job Description", loa.jobDescription || "Job Description will be given the time of signing the contract"); lineGap();
-  field("Working Hours", loa.workingHours || "09:00 to 17:00 Saturday to Sunday"); lineGap();
-  field("Work Status (Permanent / Contract)", loa.workStatus || "Contract based"); lineGap();
-  field("Contract Duration (if Contracted employee)", loa.contractDuration || "Contract will be for 2 years, Probation period is 3 months");
-  doc.moveDown(1);
+  field("Date of Commence", loa.dateOfCommence?.trim() || "Date of Arrival"); lineGap();
+  field("Job Description", loa.jobDescription?.trim() || "Job Description will be given the time of signing the contract"); lineGap();
+  field(
+    "Working Hours",
+    loa.workingHours?.trim() ||
+      "09:00 to 17:00 Saturday to Sunday * even though Friday is a holiday, your work may require your attendance to work due to the nature of business."
+  ); lineGap();
+  field("Work Status (Permanent / Contract)", loa.workStatus?.trim() || "Contract based"); lineGap();
+  field(
+    "Contract Duration (if Contracted employee)",
+    loa.contractDuration?.trim() || "Contract will be for 2 years, Probation period is 3 months"
+  );
+  doc.moveDown(1.2);
 
-  // ─── Signatory ────────────────────────────────────────────────────────────
-  doc.font("Helvetica-Bold").fontSize(11).text("Details of Signatory;").moveDown(0.4);
+  // ─── Signatory (unnumbered, matches sample) ──────────────────────────────
+  doc.font("Helvetica-Bold").fontSize(11).text("Details of Signatory;").moveDown(0.3);
   field("Name", loa.signatoryName); lineGap();
   field("Designation", loa.signatoryDesignation);
-  doc.moveDown(1.5);
+  doc.moveDown(3);
 
-  doc.font("Helvetica-Bold").fontSize(10).text("Signature:", { continued: true })
-    .font("Helvetica").text("  ______________________________");
-  doc.moveDown(0.5);
-  field("Date", loa.signatureDate);
+  field("Signature", "");
+  doc.moveDown(0.6);
+  field("Date", fmtDate(loa.signatureDate));
 
   doc.end();
 });
