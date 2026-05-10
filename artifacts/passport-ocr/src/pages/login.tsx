@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Lock } from "lucide-react";
-import leoLogo from "@assets/logo_1778407673714.png";
+import leoLogo from "@assets/image_1778408412841.png";
 
 export default function LoginPage() {
   const [, navigate] = useLocation();
@@ -37,11 +37,11 @@ export default function LoginPage() {
     <div className="min-h-screen w-full bg-app-shell flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         {/* Brand panel */}
-        <div className="rounded-2xl bg-[#e8dec4] px-6 py-5 mb-6 flex items-center justify-center shadow-sm">
+        <div className="px-6 py-2 mb-6 flex items-center justify-center">
           <img
             src={leoLogo}
             alt="LEO Employment Services"
-            className="w-full h-auto max-h-20 object-contain"
+            className="w-full h-auto max-h-24 object-contain"
           />
         </div>
 

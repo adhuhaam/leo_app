@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@workspace/api-client-react";
-import leoLogo from "@assets/logo_1778407673714.png";
+import leoLogo from "@assets/image_1778408412841.png";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
