@@ -88,8 +88,6 @@ export default function SettingsPage() {
       <CompaniesDetailsSection />
 
       <LoaOptionsSection />
-
-      <CompaniesBrandingSection />
     </div>
   );
 }
@@ -99,8 +97,9 @@ export default function SettingsPage() {
 // ============================================================================
 
 function CompaniesDetailsSection() {
-  // Branding blobs are heavy and not needed here — fetch metadata only.
-  const { data: companies = [], isLoading } = useListCompanies();
+  // Includes branding blobs (letterhead/signature) so each card can render them
+  // inline. The list is short (a handful of companies) so the extra payload is fine.
+  const { data: companies = [], isLoading } = useListCompanies({ withBranding: true });
   const [addOpen, setAddOpen] = useState(false);
 
   return (
@@ -109,11 +108,12 @@ function CompaniesDetailsSection() {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="h-3.5 w-3.5 text-teal-600" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Company Details</span>
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Companies</span>
           </div>
           <h2 className="text-xl font-semibold tracking-tight">Companies</h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Edit the name, address, and other details used on every Letter of Appointment.
+            Each card holds everything for one company — details, default signatory, letterhead, and e-signature.
+            All of it appears on every Letter of Appointment generated for that company.
           </p>
         </div>
         <Button onClick={() => setAddOpen(true)} data-testid="button-add-company">
@@ -123,7 +123,7 @@ function CompaniesDetailsSection() {
 
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-72" />)}
+          {[1, 2].map((i) => <Skeleton key={i} className="h-96" />)}
         </div>
       ) : companies.length === 0 ? (
         <div className="text-center py-10 text-sm text-muted-foreground border border-dashed border-border rounded-lg">
@@ -169,6 +169,58 @@ function CompanyDetailsCard({ company }: { company: Company }) {
   const queryClient = useQueryClient();
   const updateCompany = useUpdateCompany();
   const deleteCompany = useDeleteCompany();
+
+  // Branding handlers (letterhead + e-signature) — kept inline so each company
+  // card is the single place for everything about that company.
+  const invalidateCompanies = () =>
+    queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+
+  const handleBrandingUpload = async (
+    kind: "letterheadImage" | "signatureImage",
+    file: File | null,
+  ) => {
+    if (!file) return;
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      toast({ title: "Unsupported format", description: "Please upload a PNG or JPG image.", variant: "destructive" });
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast({
+        title: "Image too large",
+        description: `Maximum size is ${(MAX_IMAGE_BYTES / 1024).toFixed(0)} KB. Yours is ${(file.size / 1024).toFixed(0)} KB.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      updateCompany.mutate(
+        { id: company.id, data: { [kind]: dataUrl } },
+        {
+          onSuccess: () => {
+            invalidateCompanies();
+            toast({ title: "Saved", description: `${kind === "letterheadImage" ? "Letterhead" : "Signature"} updated for ${company.name}.` });
+          },
+          onError: () => toast({ title: "Failed to save image", variant: "destructive" }),
+        },
+      );
+    } catch {
+      toast({ title: "Failed to read file", variant: "destructive" });
+    }
+  };
+
+  const handleBrandingClear = (kind: "letterheadImage" | "signatureImage") => {
+    updateCompany.mutate(
+      { id: company.id, data: { [kind]: null } },
+      {
+        onSuccess: () => {
+          invalidateCompanies();
+          toast({ title: "Removed" });
+        },
+        onError: () => toast({ title: "Failed to remove image", variant: "destructive" }),
+      },
+    );
+  };
 
   const [form, setForm] = useState<CompanyFormState>(() => companyToForm(company));
   // Snapshot of the upstream values the form was last synced from. Stays put
@@ -393,6 +445,37 @@ function CompanyDetailsCard({ company }: { company: Company }) {
                 testId={`signatory-designation-${company.id}`}
               />
             </div>
+          </div>
+
+          <div className="pt-3 mt-1 border-t border-border/60 space-y-3">
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                Letterheads &amp; e-Signatures
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Images here are saved immediately — no need to click Save changes.
+              </p>
+            </div>
+            <ImageSlot
+              label="Letterhead"
+              hint="Header image at top of PDF (e.g. logo + address banner)"
+              dataUrl={company.letterheadImage ?? null}
+              onPick={(f) => handleBrandingUpload("letterheadImage", f)}
+              onClear={() => handleBrandingClear("letterheadImage")}
+              previewClass="h-20 bg-white"
+              testId={`letterhead-${company.id}`}
+              disabled={updateCompany.isPending}
+            />
+            <ImageSlot
+              label="e-Signature"
+              hint="Transparent PNG works best (will sit on the signature line)"
+              dataUrl={company.signatureImage ?? null}
+              onPick={(f) => handleBrandingUpload("signatureImage", f)}
+              onClear={() => handleBrandingClear("signatureImage")}
+              previewClass="h-16 bg-[linear-gradient(45deg,_#f3f4f6_25%,_transparent_25%),_linear-gradient(-45deg,_#f3f4f6_25%,_transparent_25%),_linear-gradient(45deg,_transparent_75%,_#f3f4f6_75%),_linear-gradient(-45deg,_transparent_75%,_#f3f4f6_75%)] bg-[length:12px_12px] bg-[position:0_0,_0_6px,_6px_-6px,_-6px_0px]"
+              testId={`signature-${company.id}`}
+              disabled={updateCompany.isPending}
+            />
           </div>
         </div>
 
@@ -624,132 +707,6 @@ function readFileAsDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
-}
-
-function CompaniesBrandingSection() {
-  // Need branding blobs to render previews + Replace button — opt in to heavy fields.
-  const { data: companies = [], isLoading } = useListCompanies({ withBranding: true });
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-end justify-between gap-4 border-t border-border/60 pt-8">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 className="h-3.5 w-3.5 text-indigo-500" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Company Branding</span>
-          </div>
-          <h2 className="text-xl font-semibold tracking-tight">Letterheads &amp; e-Signatures</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Upload a letterhead image and an e-signature for each company. They will appear on every LOA generated for that company.
-          </p>
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-48" />)}
-        </div>
-      ) : companies.length === 0 ? (
-        <div className="text-center py-10 text-sm text-muted-foreground border border-dashed border-border rounded-lg">
-          No companies yet. Add one from the Letter of Appointment page.
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {companies.map((c) => <CompanyBrandingCard key={c.id} company={c} />)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CompanyBrandingCard({ company }: { company: Company }) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const updateCompany = useUpdateCompany();
-
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
-
-  const handleUpload = async (kind: "letterheadImage" | "signatureImage", file: File | null) => {
-    if (!file) return;
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      toast({ title: "Unsupported format", description: "Please upload a PNG or JPG image.", variant: "destructive" });
-      return;
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      toast({
-        title: "Image too large",
-        description: `Maximum size is ${(MAX_IMAGE_BYTES / 1024).toFixed(0)} KB. Yours is ${(file.size / 1024).toFixed(0)} KB.`,
-        variant: "destructive",
-      });
-      return;
-    }
-    try {
-      const dataUrl = await readFileAsDataUrl(file);
-      updateCompany.mutate(
-        { id: company.id, data: { [kind]: dataUrl } },
-        {
-          onSuccess: () => {
-            invalidate();
-            toast({ title: "Saved", description: `${kind === "letterheadImage" ? "Letterhead" : "Signature"} updated for ${company.name}.` });
-          },
-          onError: () => toast({ title: "Failed to save image", variant: "destructive" }),
-        }
-      );
-    } catch {
-      toast({ title: "Failed to read file", variant: "destructive" });
-    }
-  };
-
-  const handleClear = (kind: "letterheadImage" | "signatureImage") => {
-    updateCompany.mutate(
-      { id: company.id, data: { [kind]: null } },
-      {
-        onSuccess: () => {
-          invalidate();
-          toast({ title: "Removed" });
-        },
-        onError: () => toast({ title: "Failed to remove image", variant: "destructive" }),
-      }
-    );
-  };
-
-  return (
-    <Card className="border-border/60 shadow-sm overflow-hidden">
-      <CardContent className="p-5 space-y-4">
-        <div className="flex items-center gap-3 pb-3 border-b border-border/60">
-          <div className="h-9 w-9 rounded-md bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-            <Building2 className="h-4 w-4 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold truncate">{company.name}</h3>
-            {company.country && <p className="text-xs text-muted-foreground truncate">{company.country}</p>}
-          </div>
-        </div>
-
-        <ImageSlot
-          label="Letterhead"
-          hint="Header image at top of PDF (e.g. logo + address banner)"
-          dataUrl={company.letterheadImage ?? null}
-          onPick={(f) => handleUpload("letterheadImage", f)}
-          onClear={() => handleClear("letterheadImage")}
-          previewClass="h-20 bg-white"
-          testId={`letterhead-${company.id}`}
-          disabled={updateCompany.isPending}
-        />
-
-        <ImageSlot
-          label="e-Signature"
-          hint="Transparent PNG works best (will sit on the signature line)"
-          dataUrl={company.signatureImage ?? null}
-          onPick={(f) => handleUpload("signatureImage", f)}
-          onClear={() => handleClear("signatureImage")}
-          previewClass="h-16 bg-[linear-gradient(45deg,_#f3f4f6_25%,_transparent_25%),_linear-gradient(-45deg,_#f3f4f6_25%,_transparent_25%),_linear-gradient(45deg,_transparent_75%,_#f3f4f6_75%),_linear-gradient(-45deg,_transparent_75%,_#f3f4f6_75%)] bg-[length:12px_12px] bg-[position:0_0,_0_6px,_6px_-6px,_-6px_0px]"
-          testId={`signature-${company.id}`}
-          disabled={updateCompany.isPending}
-        />
-      </CardContent>
-    </Card>
-  );
 }
 
 function ImageSlot({
