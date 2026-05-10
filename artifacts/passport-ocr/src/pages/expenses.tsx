@@ -210,8 +210,8 @@ export default function ExpensesPage() {
         </div>
       )}
 
-      {/* Total + per-category cards — compact dashboard tiles */}
-      <div className="grid gap-2.5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+      {/* Total + per-category cards — pill-sized buttons */}
+      <div className="flex flex-wrap gap-2">
         <TotalCard
           label="Total"
           amount={grandTotal}
@@ -226,7 +226,7 @@ export default function ExpensesPage() {
           testId="total"
         />
         {catsLoading
-          ? [1, 2, 3].map((i) => <Skeleton key={i} className="h-[72px] rounded-lg" />)
+          ? [1, 2, 3].map((i) => <Skeleton key={i} className="h-7 w-32 rounded-full" />)
           : categories.map((c) => (
               <TotalCard
                 key={c.id}
@@ -411,28 +411,24 @@ function TotalCard({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-lg border ${accent.card} pl-3 pr-2.5 py-2 shadow-sm transition-shadow hover:shadow-md`}
+      className={`inline-flex items-center gap-1.5 h-7 pl-2 pr-1 rounded-full border ${accent.card} shadow-sm transition-shadow hover:shadow`}
       data-testid={`card-total-${testId}`}
+      title={`${label} • ${count} ${count === 1 ? "entry" : "entries"}`}
     >
-      {/* Vivid left stripe — visual anchor without taking space */}
-      <span className={`absolute left-0 top-0 bottom-0 w-1 ${accent.stripe}`} aria-hidden />
-      <div className="flex items-center justify-between gap-1">
-        <span
-          className={`text-[9px] font-semibold tracking-[0.12em] uppercase truncate ${accent.label}`}
-          title={label}
-        >
-          {label}
-        </span>
-        <span
-          className={`text-[9px] font-mono tabular-nums px-1 rounded-full bg-black/10 ${accent.label}`}
-          title={`${count} entries`}
-        >
-          {count}
-        </span>
-      </div>
-      <div className={`mt-0.5 text-[15px] sm:text-base font-bold tabular-nums leading-tight ${accent.amount}`}>
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${accent.stripe}`} aria-hidden />
+      <span
+        className={`text-[10px] font-semibold tracking-wide uppercase max-w-[90px] truncate ${accent.label}`}
+      >
+        {label}
+      </span>
+      <span className={`text-[11px] font-bold tabular-nums ${accent.amount}`}>
         {formatMVR(amount)}
-      </div>
+      </span>
+      <span
+        className={`text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-full bg-black/15 ${accent.label}`}
+      >
+        {count}
+      </span>
     </div>
   );
 }
