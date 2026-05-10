@@ -1,11 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListLoaOptions,
   useCreateLoaOption,
   useDeleteLoaOption,
   useListCompanies,
+  useCreateCompany,
   useUpdateCompany,
+  useDeleteCompany,
   getListLoaOptionsQueryKey,
   getListCompaniesQueryKey,
 } from "@workspace/api-client-react";
@@ -13,9 +15,22 @@ import type { LoaOption, Company } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X } from "lucide-react";
+import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2 } from "lucide-react";
 
 type Category = "work_type" | "work_site" | "job_title";
 
@@ -69,6 +84,8 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      <CompaniesDetailsSection />
+
       <div className="grid gap-6 lg:grid-cols-3">
         {LISTS.map((cfg) => (
           <OptionList key={cfg.category} cfg={cfg} />
@@ -77,6 +94,443 @@ export default function SettingsPage() {
 
       <CompaniesBrandingSection />
     </div>
+  );
+}
+
+// ============================================================================
+// Company Details (name, address, email, country, registration number)
+// ============================================================================
+
+function CompaniesDetailsSection() {
+  // Branding blobs are heavy and not needed here — fetch metadata only.
+  const { data: companies = [], isLoading } = useListCompanies();
+  const [addOpen, setAddOpen] = useState(false);
+
+  return (
+    <div className="space-y-4 border-t border-border/60 pt-8">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Building2 className="h-3.5 w-3.5 text-teal-600" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Company Details</span>
+          </div>
+          <h2 className="text-xl font-semibold tracking-tight">Companies</h2>
+          <p className="text-muted-foreground text-sm mt-1">
+            Edit the name, address, and other details used on every Letter of Appointment.
+          </p>
+        </div>
+        <Button onClick={() => setAddOpen(true)} data-testid="button-add-company">
+          <Plus className="h-4 w-4 mr-1" /> Add company
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {[1, 2].map((i) => <Skeleton key={i} className="h-72" />)}
+        </div>
+      ) : companies.length === 0 ? (
+        <div className="text-center py-10 text-sm text-muted-foreground border border-dashed border-border rounded-lg">
+          No companies yet. Click <span className="font-medium">Add company</span> to create your first one.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {companies.map((c) => <CompanyDetailsCard key={c.id} company={c} />)}
+        </div>
+      )}
+
+      <AddCompanyDialog open={addOpen} onOpenChange={setAddOpen} />
+    </div>
+  );
+}
+
+interface CompanyFormState {
+  name: string;
+  address: string;
+  email: string;
+  country: string;
+  registrationNumber: string;
+}
+
+function companyToForm(c: Company): CompanyFormState {
+  return {
+    name: c.name ?? "",
+    address: c.address ?? "",
+    email: c.email ?? "",
+    country: c.country ?? "",
+    registrationNumber: c.registrationNumber ?? "",
+  };
+}
+
+function CompanyDetailsCard({ company }: { company: Company }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const updateCompany = useUpdateCompany();
+  const deleteCompany = useDeleteCompany();
+
+  const [form, setForm] = useState<CompanyFormState>(() => companyToForm(company));
+  // Snapshot of the upstream values the form was last synced from. Stays put
+  // when the user is editing so background refetches don't clobber typed input.
+  const [baseline, setBaseline] = useState<CompanyFormState>(() => companyToForm(company));
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  const isDirty =
+    form.name !== baseline.name ||
+    form.address !== baseline.address ||
+    form.email !== baseline.email ||
+    form.country !== baseline.country ||
+    form.registrationNumber !== baseline.registrationNumber;
+
+  // Only re-sync from upstream when the user has no unsaved edits. Otherwise
+  // refetches (focus, invalidations) would silently wipe what they're typing.
+  useEffect(() => {
+    if (isDirty) return;
+    const next = companyToForm(company);
+    setBaseline(next);
+    setForm(next);
+    // We intentionally depend on `company` only — `isDirty` is checked at run
+    // time and is derived from the latest `form`/`baseline` values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [company]);
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+
+  const handleSave = () => {
+    const trimmedName = form.name.trim();
+    if (!trimmedName) {
+      toast({ title: "Name required", description: "Company name can't be empty.", variant: "destructive" });
+      return;
+    }
+    const trimmedEmail = form.email.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      toast({ title: "Invalid email", description: "Enter a valid email address or leave it blank.", variant: "destructive" });
+      return;
+    }
+
+    // Build a patch of only the fields the user actually changed so we don't
+    // overwrite values another tab/user may have updated in the meantime.
+    const trimmed: CompanyFormState = {
+      name: trimmedName,
+      address: form.address.trim(),
+      email: trimmedEmail,
+      country: form.country.trim(),
+      registrationNumber: form.registrationNumber.trim(),
+    };
+    const patch: Partial<CompanyFormState> = {};
+    (Object.keys(trimmed) as (keyof CompanyFormState)[]).forEach((k) => {
+      if (trimmed[k] !== baseline[k]) patch[k] = trimmed[k];
+    });
+    if (Object.keys(patch).length === 0) {
+      toast({ title: "Nothing to save" });
+      return;
+    }
+
+    updateCompany.mutate(
+      { id: company.id, data: patch },
+      {
+        onSuccess: () => {
+          // Adopt the just-saved values as the new baseline so the form is no
+          // longer "dirty" and future refetches can sync cleanly.
+          setBaseline(trimmed);
+          setForm(trimmed);
+          invalidate();
+          toast({ title: "Saved", description: `Updated ${trimmedName}.` });
+        },
+        onError: () => toast({ title: "Failed to save", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleReset = () => setForm(baseline);
+
+  const handleDelete = () => {
+    deleteCompany.mutate(
+      { id: company.id },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "Deleted", description: `Removed ${company.name}.` });
+          setConfirmDeleteOpen(false);
+        },
+        onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
+      }
+    );
+  };
+
+  return (
+    <Card className="border-border/60 shadow-sm overflow-hidden" data-testid={`card-company-${company.id}`}>
+      <CardContent className="p-5 space-y-4">
+        <div className="flex items-center gap-3 pb-3 border-b border-border/60">
+          <div className="h-9 w-9 rounded-md bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+            <Building2 className="h-4 w-4 text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold truncate">{company.name}</h3>
+            <p className="text-[10px] font-mono text-muted-foreground">ID #{company.id}</p>
+          </div>
+
+          <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                title="Delete company"
+                data-testid={`button-delete-company-${company.id}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {company.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently removes the company and its branding (letterhead and signature).
+                  Letters of Appointment already generated for this company keep their snapshot of the
+                  details and are not affected.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleteCompany.isPending}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDelete();
+                  }}
+                  disabled={deleteCompany.isPending}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  data-testid={`button-confirm-delete-company-${company.id}`}
+                >
+                  {deleteCompany.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+
+        <div className="grid gap-3">
+          <Field
+            label="Company name"
+            required
+            value={form.name}
+            onChange={(v) => setForm((s) => ({ ...s, name: v }))}
+            placeholder="LEO Employment Services"
+            testId={`name-${company.id}`}
+          />
+          <Field
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(v) => setForm((s) => ({ ...s, email: v }))}
+            placeholder="contact@example.com"
+            testId={`email-${company.id}`}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Country"
+              value={form.country}
+              onChange={(v) => setForm((s) => ({ ...s, country: v }))}
+              placeholder="Maldives"
+              testId={`country-${company.id}`}
+            />
+            <Field
+              label="Registration #"
+              value={form.registrationNumber}
+              onChange={(v) => setForm((s) => ({ ...s, registrationNumber: v }))}
+              placeholder="C-20542025"
+              testId={`reg-${company.id}`}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Address</Label>
+            <Textarea
+              rows={2}
+              value={form.address}
+              onChange={(e) => setForm((s) => ({ ...s, address: e.target.value }))}
+              placeholder="Street, city, postcode"
+              data-testid={`input-address-${company.id}`}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+          {isDirty && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              disabled={updateCompany.isPending}
+              data-testid={`button-reset-${company.id}`}
+            >
+              Reset
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!isDirty || updateCompany.isPending}
+            data-testid={`button-save-company-${company.id}`}
+          >
+            {updateCompany.isPending ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-1" />
+            )}
+            Save changes
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  required,
+  testId,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  required?: boolean;
+  testId: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium">
+        {label}
+        {required && <span className="text-destructive ml-0.5">*</span>}
+      </Label>
+      <Input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        data-testid={`input-${testId}`}
+      />
+    </div>
+  );
+}
+
+function AddCompanyDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const createCompany = useCreateCompany();
+  const empty: CompanyFormState = { name: "", address: "", email: "", country: "", registrationNumber: "" };
+  const [form, setForm] = useState<CompanyFormState>(empty);
+
+  useEffect(() => {
+    if (!open) setForm(empty);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const handleCreate = () => {
+    const name = form.name.trim();
+    if (!name) {
+      toast({ title: "Name required", variant: "destructive" });
+      return;
+    }
+    createCompany.mutate(
+      {
+        data: {
+          name,
+          address: form.address.trim(),
+          email: form.email.trim(),
+          country: form.country.trim(),
+          registrationNumber: form.registrationNumber.trim(),
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+          toast({ title: "Company added", description: name });
+          onOpenChange(false);
+        },
+        onError: () => toast({ title: "Failed to add company", variant: "destructive" }),
+      }
+    );
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Add a company</AlertDialogTitle>
+          <AlertDialogDescription>
+            You can edit the rest of the details — and upload a letterhead and signature — afterwards.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="grid gap-3 py-2">
+          <Field
+            label="Company name"
+            required
+            value={form.name}
+            onChange={(v) => setForm((s) => ({ ...s, name: v }))}
+            placeholder="LEO Employment Services"
+            testId="new-name"
+          />
+          <Field
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(v) => setForm((s) => ({ ...s, email: v }))}
+            placeholder="contact@example.com"
+            testId="new-email"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Country"
+              value={form.country}
+              onChange={(v) => setForm((s) => ({ ...s, country: v }))}
+              testId="new-country"
+            />
+            <Field
+              label="Registration #"
+              value={form.registrationNumber}
+              onChange={(v) => setForm((s) => ({ ...s, registrationNumber: v }))}
+              testId="new-reg"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Address</Label>
+            <Textarea
+              rows={2}
+              value={form.address}
+              onChange={(e) => setForm((s) => ({ ...s, address: e.target.value }))}
+              data-testid="input-new-address"
+            />
+          </div>
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={createCompany.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              handleCreate();
+            }}
+            disabled={createCompany.isPending || !form.name.trim()}
+            data-testid="button-confirm-add-company"
+          >
+            {createCompany.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+            Add company
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
