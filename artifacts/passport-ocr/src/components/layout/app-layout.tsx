@@ -5,6 +5,7 @@ import {
   UploadCloud,
   FileText,
   FileSignature,
+  Users,
   Menu,
   X,
   Settings,
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
   { href: "/upload", label: "Process Document", icon: UploadCloud, group: "Operations" },
   { href: "/passports", label: "Records", icon: FileText, group: "Operations" },
+  { href: "/master-list", label: "Master List", icon: Users, group: "Operations" },
   { href: "/loa", label: "Letter of Appointment", icon: FileSignature, group: "Operations" },
   { href: "/settings", label: "Settings", icon: Settings, group: "System" },
 ];
