@@ -60,6 +60,25 @@ function pad(n: number, width = 6): string {
   return String(n).padStart(width, "0");
 }
 
+// All invoices and quotations are issued by LEO Employment Services. Resolve
+// (or auto-create) the matching companies row so the user never has to seed it
+// manually — works the same in dev and production.
+const ISSUER_NAME = "LEO EMPLOYMENT SERVICES PVT LTD";
+const ISSUER_REG_NUMBER = "C20542025";
+async function getOrCreateIssuerId(tx: Tx): Promise<number> {
+  const existing = await tx
+    .select({ id: companiesTable.id })
+    .from(companiesTable)
+    .where(sql`LOWER(${companiesTable.name}) = LOWER(${ISSUER_NAME})`)
+    .limit(1);
+  if (existing.length > 0) return existing[0].id;
+  const inserted = await tx
+    .insert(companiesTable)
+    .values({ name: ISSUER_NAME, registrationNumber: ISSUER_REG_NUMBER })
+    .returning({ id: companiesTable.id });
+  return inserted[0].id;
+}
+
 // Allocate the next number for a kind. Looks at the max existing number with
 // the matching prefix and increments. Concurrency note: we run this inside the
 // same transaction as the insert so a unique-index violation will roll back.
@@ -257,13 +276,14 @@ router.post("/billing/documents", async (req, res): Promise<void> => {
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
       const result = await db.transaction(async (tx) => {
+        const issuerId = await getOrCreateIssuerId(tx);
         const number = await allocateNumber(data.kind as "invoice" | "quotation", tx);
         const inserted = await tx
           .insert(billingDocumentsTable)
           .values({
             kind: data.kind,
             number,
-            companyId: data.companyId,
+            companyId: issuerId,
             customerName: data.customerName.trim(),
             customerAddress: data.customerAddress?.trim() || null,
             customerTin: data.customerTin?.trim() || null,
@@ -315,7 +335,7 @@ router.patch("/billing/documents/:id", async (req, res): Promise<void> => {
 
   // Build patch for the document row
   const patch: Record<string, unknown> = {};
-  if (data.companyId !== undefined) patch.companyId = data.companyId;
+  // companyId is intentionally ignored on update — issuer is fixed.
   if (data.customerName !== undefined) patch.customerName = data.customerName.trim();
   if (data.customerAddress !== undefined)
     patch.customerAddress = data.customerAddress?.trim() || null;

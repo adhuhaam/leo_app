@@ -528,14 +528,6 @@ function DocumentFormDialog({
     setForm((s) => ({ ...s, items: s.items.filter((_, idx) => idx !== i) }));
 
   const handleSubmit = () => {
-    if (!issuerId) {
-      toast({
-        title: "Issuer not configured",
-        description: `Add a company named "${ISSUER_NAME}" in Settings → Companies.`,
-        variant: "destructive",
-      });
-      return;
-    }
     if (!form.customerName.trim()) {
       toast({ title: "Bill To name is required", variant: "destructive" });
       return;
@@ -558,7 +550,8 @@ function DocumentFormDialog({
         {
           data: {
             kind,
-            companyId: issuerId,
+            // Server resolves & overrides — value here is ignored.
+            companyId: issuerId ?? 0,
             customerName: form.customerName.trim(),
             customerAddress: form.customerAddress.trim() || undefined,
             customerTin: form.customerTin.trim() || undefined,
@@ -590,7 +583,6 @@ function DocumentFormDialog({
         {
           id: documentId,
           data: {
-            companyId: issuerId,
             customerName: form.customerName.trim(),
             customerAddress: form.customerAddress.trim() || null,
             customerTin: form.customerTin.trim() || null,
