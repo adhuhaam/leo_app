@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, ListChecks, Wallet } from "lucide-react";
 
@@ -77,24 +78,87 @@ const LISTS: ListConfig[] = [
 ];
 
 export default function SettingsPage() {
+  // Persist the active tab in the URL hash so deep-links / back button work.
+  const initialTab = (() => {
+    if (typeof window === "undefined") return "companies";
+    const h = window.location.hash.replace("#", "");
+    return ["companies", "expenses", "loa"].includes(h) ? h : "companies";
+  })();
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== `#${activeTab}`) {
+      window.history.replaceState(null, "", `#${activeTab}`);
+    }
+  }, [activeTab]);
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <SettingsIcon className="h-3.5 w-3.5 text-violet-500" />
-          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">System Configuration</span>
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Hero header — gradient surface */}
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 shadow-sm">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-indigo-500/5 to-teal-500/10" />
+        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-violet-400/15 blur-3xl" />
+        <div className="absolute -bottom-24 -left-12 h-64 w-64 rounded-full bg-teal-400/10 blur-3xl" />
+        <div className="relative px-6 md:px-8 py-6 md:py-8">
+          <div className="flex items-center gap-2 mb-2">
+            <SettingsIcon className="h-3.5 w-3.5 text-violet-500" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+              System Configuration
+            </span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-2xl">
+            Configure your companies, expense categories, and the dropdown values used
+            throughout LEO OS. Changes take effect immediately.
+          </p>
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage reusable dropdown options for the Letter of Appointment generator.
-        </p>
       </div>
 
-      <CompaniesDetailsSection />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <div className="sticky top-0 z-10 -mx-2 px-2 py-2 bg-background/80 backdrop-blur-sm rounded-lg">
+          <TabsList className="w-full h-auto p-1 bg-muted/60 grid grid-cols-3 gap-1">
+            <TabsTrigger
+              value="companies"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
+              data-testid="tab-companies"
+            >
+              <Building2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Companies</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="expenses"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
+              data-testid="tab-expenses"
+            >
+              <Wallet className="h-4 w-4" />
+              <span className="hidden sm:inline">Expense Categories</span>
+              <span className="sm:hidden">Expenses</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="loa"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
+              data-testid="tab-loa"
+            >
+              <ListChecks className="h-4 w-4" />
+              <span className="hidden sm:inline">LOA Options</span>
+              <span className="sm:hidden">LOA</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-      <ExpenseCategoriesSection />
+        <TabsContent value="companies" className="mt-0 focus-visible:outline-none">
+          <CompaniesDetailsSection />
+        </TabsContent>
 
-      <LoaOptionsSection />
+        <TabsContent value="expenses" className="mt-0 focus-visible:outline-none">
+          <ExpenseCategoriesSection />
+        </TabsContent>
+
+        <TabsContent value="loa" className="mt-0 focus-visible:outline-none">
+          <LoaOptionsSection />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -229,7 +293,7 @@ function ExpenseCategoriesSection() {
     confirmDeleteId != null ? categories.find((c) => c.id === confirmDeleteId) : null;
 
   return (
-    <div className="space-y-4 border-t border-border/60 pt-8">
+    <div className="space-y-4">
       <div>
         <div className="flex items-center gap-2 mb-2">
           <Wallet className="h-3.5 w-3.5 text-amber-500" />
@@ -458,7 +522,7 @@ function CompaniesDetailsSection() {
   const [addOpen, setAddOpen] = useState(false);
 
   return (
-    <div className="space-y-4 border-t border-border/60 pt-8">
+    <div className="space-y-4">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -1148,7 +1212,7 @@ function ImageSlot({
 
 function LoaOptionsSection() {
   return (
-    <div className="space-y-4 border-t border-border/60 pt-8">
+    <div className="space-y-4">
       <div>
         <div className="flex items-center gap-2 mb-2">
           <ListChecks className="h-3.5 w-3.5 text-violet-500" />
