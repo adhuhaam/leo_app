@@ -19,6 +19,8 @@ export interface Loa {
   /** @nullable */
   companyEmail?: string | null;
   /** @nullable */
+  companyPhone?: string | null;
+  /** @nullable */
   companyCountry?: string | null;
   /** @nullable */
   companyRegistrationNumber?: string | null;

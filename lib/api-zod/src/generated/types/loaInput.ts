@@ -12,6 +12,7 @@ export interface LoaInput {
   companyName?: string;
   companyAddress?: string;
   companyEmail?: string;
+  companyPhone?: string;
   companyCountry?: string;
   companyRegistrationNumber?: string;
   candidateName?: string;

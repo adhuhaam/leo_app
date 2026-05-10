@@ -14,9 +14,15 @@ export interface Company {
   /** @nullable */
   email?: string | null;
   /** @nullable */
+  phone?: string | null;
+  /** @nullable */
   country?: string | null;
   /** @nullable */
   registrationNumber?: string | null;
+  /** @nullable */
+  signatoryName?: string | null;
+  /** @nullable */
+  signatoryDesignation?: string | null;
   /**
    * Base64 data URL (image/png or image/jpeg) shown at the top of generated LOA PDFs
    * @nullable

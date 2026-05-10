@@ -10,8 +10,11 @@ export interface CompanyUpdate {
   name?: string;
   address?: string;
   email?: string;
+  phone?: string;
   country?: string;
   registrationNumber?: string;
+  signatoryName?: string;
+  signatoryDesignation?: string;
   /** @nullable */
   letterheadImage?: string | null;
   /** @nullable */

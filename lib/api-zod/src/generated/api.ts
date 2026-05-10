@@ -172,8 +172,11 @@ export const ListCompaniesResponseItem = zod.object({
   name: zod.string(),
   address: zod.string().nullish(),
   email: zod.string().nullish(),
+  phone: zod.string().nullish(),
   country: zod.string().nullish(),
   registrationNumber: zod.string().nullish(),
+  signatoryName: zod.string().nullish(),
+  signatoryDesignation: zod.string().nullish(),
   letterheadImage: zod
     .string()
     .nullish()
@@ -198,8 +201,11 @@ export const CreateCompanyBody = zod.object({
   name: zod.string(),
   address: zod.string().optional(),
   email: zod.string().optional(),
+  phone: zod.string().optional(),
   country: zod.string().optional(),
   registrationNumber: zod.string().optional(),
+  signatoryName: zod.string().optional(),
+  signatoryDesignation: zod.string().optional(),
   letterheadImage: zod.string().optional(),
   signatureImage: zod.string().optional(),
 });
@@ -215,8 +221,11 @@ export const UpdateCompanyBody = zod.object({
   name: zod.string().optional(),
   address: zod.string().optional(),
   email: zod.string().optional(),
+  phone: zod.string().optional(),
   country: zod.string().optional(),
   registrationNumber: zod.string().optional(),
+  signatoryName: zod.string().optional(),
+  signatoryDesignation: zod.string().optional(),
   letterheadImage: zod.string().nullish(),
   signatureImage: zod.string().nullish(),
 });
@@ -226,8 +235,11 @@ export const UpdateCompanyResponse = zod.object({
   name: zod.string(),
   address: zod.string().nullish(),
   email: zod.string().nullish(),
+  phone: zod.string().nullish(),
   country: zod.string().nullish(),
   registrationNumber: zod.string().nullish(),
+  signatoryName: zod.string().nullish(),
+  signatoryDesignation: zod.string().nullish(),
   letterheadImage: zod
     .string()
     .nullish()
@@ -261,6 +273,7 @@ export const ListLoaResponseItem = zod.object({
   companyName: zod.string().nullish(),
   companyAddress: zod.string().nullish(),
   companyEmail: zod.string().nullish(),
+  companyPhone: zod.string().nullish(),
   companyCountry: zod.string().nullish(),
   companyRegistrationNumber: zod.string().nullish(),
   candidateName: zod.string().nullish(),
@@ -296,6 +309,7 @@ export const CreateLoaBody = zod.object({
   companyName: zod.string().optional(),
   companyAddress: zod.string().optional(),
   companyEmail: zod.string().optional(),
+  companyPhone: zod.string().optional(),
   companyCountry: zod.string().optional(),
   companyRegistrationNumber: zod.string().optional(),
   candidateName: zod.string().optional(),
@@ -333,6 +347,7 @@ export const GetLoaResponse = zod.object({
   companyName: zod.string().nullish(),
   companyAddress: zod.string().nullish(),
   companyEmail: zod.string().nullish(),
+  companyPhone: zod.string().nullish(),
   companyCountry: zod.string().nullish(),
   companyRegistrationNumber: zod.string().nullish(),
   candidateName: zod.string().nullish(),
@@ -371,6 +386,7 @@ export const UpdateLoaBody = zod.object({
   companyName: zod.string().optional(),
   companyAddress: zod.string().optional(),
   companyEmail: zod.string().optional(),
+  companyPhone: zod.string().optional(),
   companyCountry: zod.string().optional(),
   companyRegistrationNumber: zod.string().optional(),
   candidateName: zod.string().optional(),
@@ -401,6 +417,7 @@ export const UpdateLoaResponse = zod.object({
   companyName: zod.string().nullish(),
   companyAddress: zod.string().nullish(),
   companyEmail: zod.string().nullish(),
+  companyPhone: zod.string().nullish(),
   companyCountry: zod.string().nullish(),
   companyRegistrationNumber: zod.string().nullish(),
   candidateName: zod.string().nullish(),

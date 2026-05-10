@@ -7,8 +7,13 @@ export const companiesTable = pgTable("companies", {
   name: text("name").notNull(),
   address: text("address"),
   email: text("email"),
+  phone: text("phone"),
   country: text("country"),
   registrationNumber: text("registration_number"),
+  // Default signatory used to pre-fill the LOA "Details of Signatory" block
+  // for this company.
+  signatoryName: text("signatory_name"),
+  signatoryDesignation: text("signatory_designation"),
   letterheadImage: text("letterhead_image"),
   signatureImage: text("signature_image"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -10,8 +10,11 @@ export interface CompanyInput {
   name: string;
   address?: string;
   email?: string;
+  phone?: string;
   country?: string;
   registrationNumber?: string;
+  signatoryName?: string;
+  signatoryDesignation?: string;
   letterheadImage?: string;
   signatureImage?: string;
 }

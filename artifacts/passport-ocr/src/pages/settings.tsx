@@ -147,8 +147,11 @@ interface CompanyFormState {
   name: string;
   address: string;
   email: string;
+  phone: string;
   country: string;
   registrationNumber: string;
+  signatoryName: string;
+  signatoryDesignation: string;
 }
 
 function companyToForm(c: Company): CompanyFormState {
@@ -156,8 +159,11 @@ function companyToForm(c: Company): CompanyFormState {
     name: c.name ?? "",
     address: c.address ?? "",
     email: c.email ?? "",
+    phone: c.phone ?? "",
     country: c.country ?? "",
     registrationNumber: c.registrationNumber ?? "",
+    signatoryName: c.signatoryName ?? "",
+    signatoryDesignation: c.signatoryDesignation ?? "",
   };
 }
 
@@ -177,8 +183,11 @@ function CompanyDetailsCard({ company }: { company: Company }) {
     form.name !== baseline.name ||
     form.address !== baseline.address ||
     form.email !== baseline.email ||
+    form.phone !== baseline.phone ||
     form.country !== baseline.country ||
-    form.registrationNumber !== baseline.registrationNumber;
+    form.registrationNumber !== baseline.registrationNumber ||
+    form.signatoryName !== baseline.signatoryName ||
+    form.signatoryDesignation !== baseline.signatoryDesignation;
 
   // Only re-sync from upstream when the user has no unsaved edits. Otherwise
   // refetches (focus, invalidations) would silently wipe what they're typing.
@@ -212,8 +221,11 @@ function CompanyDetailsCard({ company }: { company: Company }) {
       name: trimmedName,
       address: form.address.trim(),
       email: trimmedEmail,
+      phone: form.phone.trim(),
       country: form.country.trim(),
       registrationNumber: form.registrationNumber.trim(),
+      signatoryName: form.signatoryName.trim(),
+      signatoryDesignation: form.signatoryDesignation.trim(),
     };
     const patch: Partial<CompanyFormState> = {};
     (Object.keys(trimmed) as (keyof CompanyFormState)[]).forEach((k) => {
@@ -317,14 +329,23 @@ function CompanyDetailsCard({ company }: { company: Company }) {
             placeholder="LEO Employment Services"
             testId={`name-${company.id}`}
           />
-          <Field
-            label="Email"
-            type="email"
-            value={form.email}
-            onChange={(v) => setForm((s) => ({ ...s, email: v }))}
-            placeholder="contact@example.com"
-            testId={`email-${company.id}`}
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Email"
+              type="email"
+              value={form.email}
+              onChange={(v) => setForm((s) => ({ ...s, email: v }))}
+              placeholder="contact@example.com"
+              testId={`email-${company.id}`}
+            />
+            <Field
+              label="Phone"
+              value={form.phone}
+              onChange={(v) => setForm((s) => ({ ...s, phone: v }))}
+              placeholder="+960 999 0000"
+              testId={`phone-${company.id}`}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field
               label="Country"
@@ -350,6 +371,31 @@ function CompanyDetailsCard({ company }: { company: Company }) {
               placeholder="Street, city, postcode"
               data-testid={`input-address-${company.id}`}
             />
+          </div>
+
+          <div className="pt-2 mt-1 border-t border-border/60">
+            <p className="text-[11px] font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+              Default Signatory
+            </p>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              Used to pre-fill the &quot;Details of Signatory&quot; block when generating an LOA for this company.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="Signatory name"
+                value={form.signatoryName}
+                onChange={(v) => setForm((s) => ({ ...s, signatoryName: v }))}
+                placeholder="Abdulla Muneeb"
+                testId={`signatory-name-${company.id}`}
+              />
+              <Field
+                label="Designation"
+                value={form.signatoryDesignation}
+                onChange={(v) => setForm((s) => ({ ...s, signatoryDesignation: v }))}
+                placeholder="Managing Director"
+                testId={`signatory-designation-${company.id}`}
+              />
+            </div>
           </div>
         </div>
 
@@ -428,7 +474,16 @@ function AddCompanyDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const createCompany = useCreateCompany();
-  const empty: CompanyFormState = { name: "", address: "", email: "", country: "", registrationNumber: "" };
+  const empty: CompanyFormState = {
+    name: "",
+    address: "",
+    email: "",
+    phone: "",
+    country: "",
+    registrationNumber: "",
+    signatoryName: "",
+    signatoryDesignation: "",
+  };
   const [form, setForm] = useState<CompanyFormState>(empty);
 
   useEffect(() => {
@@ -448,8 +503,11 @@ function AddCompanyDialog({
           name,
           address: form.address.trim(),
           email: form.email.trim(),
+          phone: form.phone.trim(),
           country: form.country.trim(),
           registrationNumber: form.registrationNumber.trim(),
+          signatoryName: form.signatoryName.trim(),
+          signatoryDesignation: form.signatoryDesignation.trim(),
         },
       },
       {
@@ -482,14 +540,23 @@ function AddCompanyDialog({
             placeholder="LEO Employment Services"
             testId="new-name"
           />
-          <Field
-            label="Email"
-            type="email"
-            value={form.email}
-            onChange={(v) => setForm((s) => ({ ...s, email: v }))}
-            placeholder="contact@example.com"
-            testId="new-email"
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Email"
+              type="email"
+              value={form.email}
+              onChange={(v) => setForm((s) => ({ ...s, email: v }))}
+              placeholder="contact@example.com"
+              testId="new-email"
+            />
+            <Field
+              label="Phone"
+              value={form.phone}
+              onChange={(v) => setForm((s) => ({ ...s, phone: v }))}
+              placeholder="+960 999 0000"
+              testId="new-phone"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field
               label="Country"
@@ -511,6 +578,22 @@ function AddCompanyDialog({
               value={form.address}
               onChange={(e) => setForm((s) => ({ ...s, address: e.target.value }))}
               data-testid="input-new-address"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60">
+            <Field
+              label="Signatory name"
+              value={form.signatoryName}
+              onChange={(v) => setForm((s) => ({ ...s, signatoryName: v }))}
+              placeholder="Abdulla Muneeb"
+              testId="new-signatory-name"
+            />
+            <Field
+              label="Designation"
+              value={form.signatoryDesignation}
+              onChange={(v) => setForm((s) => ({ ...s, signatoryDesignation: v }))}
+              placeholder="Managing Director"
+              testId="new-signatory-designation"
             />
           </div>
         </div>

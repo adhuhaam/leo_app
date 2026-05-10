@@ -10,6 +10,7 @@ export const loaTable = pgTable("loa_entries", {
   companyName: text("company_name"),
   companyAddress: text("company_address"),
   companyEmail: text("company_email"),
+  companyPhone: text("company_phone"),
   companyCountry: text("company_country"),
   companyRegistrationNumber: text("company_registration_number"),
   // Snapshotted candidate details

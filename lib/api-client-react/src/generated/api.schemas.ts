@@ -114,9 +114,15 @@ export interface Company {
   /** @nullable */
   email?: string | null;
   /** @nullable */
+  phone?: string | null;
+  /** @nullable */
   country?: string | null;
   /** @nullable */
   registrationNumber?: string | null;
+  /** @nullable */
+  signatoryName?: string | null;
+  /** @nullable */
+  signatoryDesignation?: string | null;
   /**
    * Base64 data URL (image/png or image/jpeg) shown at the top of generated LOA PDFs
    * @nullable
@@ -135,8 +141,11 @@ export interface CompanyInput {
   name: string;
   address?: string;
   email?: string;
+  phone?: string;
   country?: string;
   registrationNumber?: string;
+  signatoryName?: string;
+  signatoryDesignation?: string;
   letterheadImage?: string;
   signatureImage?: string;
 }
@@ -145,8 +154,11 @@ export interface CompanyUpdate {
   name?: string;
   address?: string;
   email?: string;
+  phone?: string;
   country?: string;
   registrationNumber?: string;
+  signatoryName?: string;
+  signatoryDesignation?: string;
   /** @nullable */
   letterheadImage?: string | null;
   /** @nullable */
@@ -165,6 +177,8 @@ export interface Loa {
   companyAddress?: string | null;
   /** @nullable */
   companyEmail?: string | null;
+  /** @nullable */
+  companyPhone?: string | null;
   /** @nullable */
   companyCountry?: string | null;
   /** @nullable */
@@ -217,6 +231,7 @@ export interface LoaInput {
   companyName?: string;
   companyAddress?: string;
   companyEmail?: string;
+  companyPhone?: string;
   companyCountry?: string;
   companyRegistrationNumber?: string;
   candidateName?: string;
@@ -246,6 +261,7 @@ export interface LoaUpdate {
   companyName?: string;
   companyAddress?: string;
   companyEmail?: string;
+  companyPhone?: string;
   companyCountry?: string;
   companyRegistrationNumber?: string;
   candidateName?: string;

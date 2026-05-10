@@ -567,9 +567,15 @@ components:
           type: ["string", "null"]
         email:
           type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
         country:
           type: ["string", "null"]
         registrationNumber:
+          type: ["string", "null"]
+        signatoryName:
+          type: ["string", "null"]
+        signatoryDesignation:
           type: ["string", "null"]
         letterheadImage:
           type: ["string", "null"]
@@ -592,9 +598,15 @@ components:
           type: string
         email:
           type: string
+        phone:
+          type: string
         country:
           type: string
         registrationNumber:
+          type: string
+        signatoryName:
+          type: string
+        signatoryDesignation:
           type: string
         letterheadImage:
           type: string
@@ -610,9 +622,15 @@ components:
           type: string
         email:
           type: string
+        phone:
+          type: string
         country:
           type: string
         registrationNumber:
+          type: string
+        signatoryName:
+          type: string
+        signatoryDesignation:
           type: string
         letterheadImage:
           type: ["string", "null"]
@@ -634,6 +652,8 @@ components:
         companyAddress:
           type: ["string", "null"]
         companyEmail:
+          type: ["string", "null"]
+        companyPhone:
           type: ["string", "null"]
         companyCountry:
           type: ["string", "null"]
@@ -695,6 +715,8 @@ components:
           type: string
         companyEmail:
           type: string
+        companyPhone:
+          type: string
         companyCountry:
           type: string
         companyRegistrationNumber:
@@ -750,6 +772,8 @@ components:
         companyAddress:
           type: string
         companyEmail:
+          type: string
+        companyPhone:
           type: string
         companyCountry:
           type: string

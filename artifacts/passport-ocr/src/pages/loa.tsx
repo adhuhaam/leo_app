@@ -63,7 +63,7 @@ const DEFAULT_FORM: FormData = {
   workStatus: "Contract based",
   contractDuration: "Contract will be for 2 years, Probation period is 3 months",
   signatoryName: "",
-  signatoryDesignation: "Managing Director",
+  signatoryDesignation: "",
   signatureDate: new Date().toLocaleDateString("en-GB"),
 };
 
@@ -164,7 +164,27 @@ function StepOne({
             + Add new
           </button>
         </div>
-        <Select value={form.companyId} onValueChange={(v) => setForm({ ...form, companyId: v })}>
+        <Select
+          value={form.companyId}
+          onValueChange={(v) => {
+            const c = companies.find((x) => String(x.id) === v);
+            setForm({
+              ...form,
+              companyId: v,
+              // Pre-fill signatory from the company's defaults — but only when
+              // the user hasn't typed anything custom yet. This keeps switching
+              // companies useful while not stomping on edits in step 3.
+              signatoryName:
+                form.signatoryName && form.signatoryName !== (companies.find((x) => String(x.id) === form.companyId)?.signatoryName ?? "")
+                  ? form.signatoryName
+                  : c?.signatoryName ?? "",
+              signatoryDesignation:
+                form.signatoryDesignation && form.signatoryDesignation !== (companies.find((x) => String(x.id) === form.companyId)?.signatoryDesignation ?? "")
+                  ? form.signatoryDesignation
+                  : c?.signatoryDesignation ?? "",
+            });
+          }}
+        >
           <SelectTrigger data-testid="select-company">
             <SelectValue placeholder="Select a company..." />
           </SelectTrigger>
@@ -418,15 +438,29 @@ function AddCompanyDialog({ open, onClose, onSaved }: { open: boolean; onClose: 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
   const [regNum, setRegNum] = useState("");
+  const [signatoryName, setSignatoryName] = useState("");
+  const [signatoryDesignation, setSignatoryDesignation] = useState("");
   const createCompany = useCreateCompany();
   const { toast } = useToast();
 
   const handleSave = () => {
     if (!name.trim()) return;
     createCompany.mutate(
-      { data: { name, address: address || undefined, email: email || undefined, country: country || undefined, registrationNumber: regNum || undefined } },
+      {
+        data: {
+          name,
+          address: address || undefined,
+          email: email || undefined,
+          phone: phone || undefined,
+          country: country || undefined,
+          registrationNumber: regNum || undefined,
+          signatoryName: signatoryName || undefined,
+          signatoryDesignation: signatoryDesignation || undefined,
+        },
+      },
       {
         onSuccess: (company) => {
           toast({ title: "Company saved" });
@@ -447,9 +481,18 @@ function AddCompanyDialog({ open, onClose, onSaved }: { open: boolean; onClose: 
         <div className="space-y-3 py-2">
           <div className="space-y-1.5"><Label>Company Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} data-testid="input-company-name" /></div>
           <div className="space-y-1.5"><Label>Address</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} data-testid="input-company-address" /></div>
-          <div className="space-y-1.5"><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} data-testid="input-company-email" /></div>
-          <div className="space-y-1.5"><Label>Country</Label><Input value={country} onChange={(e) => setCountry(e.target.value)} data-testid="input-company-country" /></div>
-          <div className="space-y-1.5"><Label>Registration Number</Label><Input value={regNum} onChange={(e) => setRegNum(e.target.value)} data-testid="input-company-regnum" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} data-testid="input-company-email" /></div>
+            <div className="space-y-1.5"><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+960 999 0000" data-testid="input-company-phone" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label>Country</Label><Input value={country} onChange={(e) => setCountry(e.target.value)} data-testid="input-company-country" /></div>
+            <div className="space-y-1.5"><Label>Registration Number</Label><Input value={regNum} onChange={(e) => setRegNum(e.target.value)} data-testid="input-company-regnum" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60">
+            <div className="space-y-1.5"><Label>Signatory Name</Label><Input value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} placeholder="Abdulla Muneeb" data-testid="input-company-signatory-name" /></div>
+            <div className="space-y-1.5"><Label>Designation</Label><Input value={signatoryDesignation} onChange={(e) => setSignatoryDesignation(e.target.value)} placeholder="Managing Director" data-testid="input-company-signatory-designation" /></div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
@@ -498,6 +541,7 @@ export default function LoaPage() {
           companyName: selectedCompany.name,
           companyAddress: selectedCompany.address ?? undefined,
           companyEmail: selectedCompany.email ?? undefined,
+          companyPhone: selectedCompany.phone ?? undefined,
           companyCountry: selectedCompany.country ?? undefined,
           companyRegistrationNumber: selectedCompany.registrationNumber ?? undefined,
           // Snapshot candidate

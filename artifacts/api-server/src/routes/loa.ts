@@ -185,6 +185,7 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
   field("Name", loa.companyName); lineGap();
   field("Address", loa.companyAddress); lineGap();
   field("Contact Details / Email address", loa.companyEmail); lineGap();
+  field("Phone Number", loa.companyPhone); lineGap();
   field("Country of origin", loa.companyCountry); lineGap();
   field("Registration Number/ID Card", loa.companyRegistrationNumber);
   doc.moveDown(1);
