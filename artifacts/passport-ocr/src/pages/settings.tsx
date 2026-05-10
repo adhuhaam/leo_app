@@ -13,9 +13,13 @@ import {
   useCreateExpenseCategory,
   useUpdateExpenseCategory,
   useDeleteExpenseCategory,
+  useGetSystemSettings,
+  useUpdateSystemSettings,
+  useChangePassword,
   getListLoaOptionsQueryKey,
   getListCompaniesQueryKey,
   getListExpenseCategoriesQueryKey,
+  getGetSystemSettingsQueryKey,
 } from "@workspace/api-client-react";
 import type { LoaOption, Company, ExpenseCategory } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,7 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, ListChecks, Wallet } from "lucide-react";
+import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, ListChecks, Wallet, Cog, Palette, KeyRound, Eye, EyeOff } from "lucide-react";
 
 type Category = "work_type" | "work_site" | "job_title";
 
@@ -82,7 +86,7 @@ export default function SettingsPage() {
   const initialTab = (() => {
     if (typeof window === "undefined") return "companies";
     const h = window.location.hash.replace("#", "");
-    return ["companies", "expenses", "loa"].includes(h) ? h : "companies";
+    return ["system", "companies", "expenses", "loa"].includes(h) ? h : "system";
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -117,7 +121,15 @@ export default function SettingsPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="sticky top-0 z-10 -mx-2 px-2 py-2 bg-background/80 backdrop-blur-sm rounded-lg">
-          <TabsList className="w-full h-auto p-1 bg-muted/60 grid grid-cols-3 gap-1">
+          <TabsList className="w-full h-auto p-1 bg-muted/60 grid grid-cols-2 sm:grid-cols-4 gap-1">
+            <TabsTrigger
+              value="system"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
+              data-testid="tab-system"
+            >
+              <Cog className="h-4 w-4" />
+              <span className="hidden sm:inline">System</span>
+            </TabsTrigger>
             <TabsTrigger
               value="companies"
               className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
@@ -146,6 +158,10 @@ export default function SettingsPage() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="system" className="mt-0 focus-visible:outline-none">
+          <SystemSection />
+        </TabsContent>
 
         <TabsContent value="companies" className="mt-0 focus-visible:outline-none">
           <CompaniesDetailsSection />
@@ -1491,6 +1507,512 @@ function OptionList({ cfg }: { cfg: ListConfig }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </Card>
+  );
+}
+
+// ============================================================================
+// System (app name, branding, theme, password)
+// ============================================================================
+
+const HUE_PRESETS: { name: string; hue: number }[] = [
+  { name: "Teal",    hue: 162 },
+  { name: "Emerald", hue: 152 },
+  { name: "Sky",     hue: 200 },
+  { name: "Indigo",  hue: 235 },
+  { name: "Violet",  hue: 265 },
+  { name: "Rose",    hue: 340 },
+  { name: "Amber",   hue: 35 },
+  { name: "Slate",   hue: 215 },
+];
+
+interface SystemFormState {
+  appName: string;
+  accentHue: number;
+  companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+  companyEmail: string;
+  companyWebsite: string;
+  companyRegistrationNumber: string;
+  logoImage: string | null;
+}
+
+function SystemSection() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data, isLoading } = useGetSystemSettings();
+  const updateMutation = useUpdateSystemSettings();
+
+  const [form, setForm] = useState<SystemFormState | null>(null);
+
+  // Hydrate the local form whenever the server payload changes (and we don't
+  // have unsaved edits yet).
+  useEffect(() => {
+    if (!data) return;
+    setForm((prev) =>
+      prev ?? {
+        appName: data.appName,
+        accentHue: data.accentHue,
+        companyName: data.companyName ?? "",
+        companyAddress: data.companyAddress ?? "",
+        companyPhone: data.companyPhone ?? "",
+        companyEmail: data.companyEmail ?? "",
+        companyWebsite: data.companyWebsite ?? "",
+        companyRegistrationNumber: data.companyRegistrationNumber ?? "",
+        logoImage: data.logoImage ?? null,
+      }
+    );
+  }, [data]);
+
+  if (isLoading || !form || !data) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  const dirty =
+    form.appName !== data.appName ||
+    form.accentHue !== data.accentHue ||
+    (form.companyName || "") !== (data.companyName ?? "") ||
+    (form.companyAddress || "") !== (data.companyAddress ?? "") ||
+    (form.companyPhone || "") !== (data.companyPhone ?? "") ||
+    (form.companyEmail || "") !== (data.companyEmail ?? "") ||
+    (form.companyWebsite || "") !== (data.companyWebsite ?? "") ||
+    (form.companyRegistrationNumber || "") !== (data.companyRegistrationNumber ?? "") ||
+    (form.logoImage ?? null) !== (data.logoImage ?? null);
+
+  const handleSave = () => {
+    const trimmedName = form.appName.trim();
+    if (!trimmedName) {
+      toast({ title: "App name is required", variant: "destructive" });
+      return;
+    }
+    updateMutation.mutate(
+      {
+        data: {
+          appName: trimmedName,
+          accentHue: form.accentHue,
+          companyName: form.companyName.trim() || null,
+          companyAddress: form.companyAddress.trim() || null,
+          companyPhone: form.companyPhone.trim() || null,
+          companyEmail: form.companyEmail.trim() || null,
+          companyWebsite: form.companyWebsite.trim() || null,
+          companyRegistrationNumber: form.companyRegistrationNumber.trim() || null,
+          logoImage: form.logoImage,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetSystemSettingsQueryKey() });
+          toast({ title: "System settings saved" });
+        },
+        onError: (err: unknown) => {
+          const message =
+            (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+            "Please try again.";
+          toast({ title: "Failed to save", description: message, variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleReset = () => {
+    setForm({
+      appName: data.appName,
+      accentHue: data.accentHue,
+      companyName: data.companyName ?? "",
+      companyAddress: data.companyAddress ?? "",
+      companyPhone: data.companyPhone ?? "",
+      companyEmail: data.companyEmail ?? "",
+      companyWebsite: data.companyWebsite ?? "",
+      companyRegistrationNumber: data.companyRegistrationNumber ?? "",
+      logoImage: data.logoImage ?? null,
+    });
+  };
+
+  const pickLogo = async (file: File | null) => {
+    if (!file) return;
+    if (!/^image\/(png|jpe?g|webp|svg\+xml)$/.test(file.type)) {
+      toast({ title: "Unsupported image type", description: "Use PNG, JPEG, WebP or SVG.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 600 * 1024) {
+      toast({ title: "Image too large", description: "Max 600 KB.", variant: "destructive" });
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setForm((s) => (s ? { ...s, logoImage: dataUrl } : s));
+    } catch {
+      toast({ title: "Failed to read image", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Identity */}
+      <Card>
+        <CardContent className="p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <Cog className="h-3.5 w-3.5 text-violet-500" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+              Identity
+            </span>
+          </div>
+          <h2 className="text-xl font-semibold tracking-tight -mt-3">App identity</h2>
+          <p className="text-xs text-muted-foreground -mt-2">
+            The name and logo that appear in the sidebar, browser tab, and login screen.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-[200px,1fr] gap-5 items-start">
+            <div>
+              <ImageSlot
+                label="Logo"
+                hint="PNG / JPEG / WebP, ≤600 KB"
+                dataUrl={form.logoImage}
+                onPick={pickLogo}
+                onClear={() => setForm((s) => (s ? { ...s, logoImage: null } : s))}
+                previewClass="h-32 bg-muted/40"
+                testId="system-logo"
+              />
+            </div>
+
+            <div className="space-y-4">
+              <Field
+                label="App name"
+                value={form.appName}
+                onChange={(v) => setForm((s) => (s ? { ...s, appName: v } : s))}
+                placeholder="LEO OS"
+                required
+                testId="system-app-name"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Company / organization */}
+      <Card>
+        <CardContent className="p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+              Organization
+            </span>
+          </div>
+          <h2 className="text-xl font-semibold tracking-tight -mt-3">Default company details</h2>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Used as the default issuer on documents and shown in the app header.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field
+              label="Company name"
+              value={form.companyName}
+              onChange={(v) => setForm((s) => (s ? { ...s, companyName: v } : s))}
+              placeholder="LEO Employment Services Pvt Ltd"
+              testId="system-company-name"
+            />
+            <Field
+              label="Registration number"
+              value={form.companyRegistrationNumber}
+              onChange={(v) => setForm((s) => (s ? { ...s, companyRegistrationNumber: v } : s))}
+              placeholder="C20542025"
+              testId="system-company-reg"
+            />
+            <Field
+              label="Phone"
+              value={form.companyPhone}
+              onChange={(v) => setForm((s) => (s ? { ...s, companyPhone: v } : s))}
+              placeholder="+960 ..."
+              testId="system-company-phone"
+            />
+            <Field
+              label="Email"
+              type="email"
+              value={form.companyEmail}
+              onChange={(v) => setForm((s) => (s ? { ...s, companyEmail: v } : s))}
+              placeholder="hello@example.com"
+              testId="system-company-email"
+            />
+            <Field
+              label="Website"
+              value={form.companyWebsite}
+              onChange={(v) => setForm((s) => (s ? { ...s, companyWebsite: v } : s))}
+              placeholder="https://example.com"
+              testId="system-company-website"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Address</Label>
+            <Textarea
+              value={form.companyAddress}
+              onChange={(e) =>
+                setForm((s) => (s ? { ...s, companyAddress: e.target.value } : s))
+              }
+              placeholder="Street, City, Country"
+              rows={3}
+              data-testid="input-system-company-address"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Color scheme */}
+      <Card>
+        <CardContent className="p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <Palette className="h-3.5 w-3.5 text-rose-500" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+              Appearance
+            </span>
+          </div>
+          <h2 className="text-xl font-semibold tracking-tight -mt-3">Accent color</h2>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Pick a preset or fine-tune the hue. Changes preview live and apply to everyone after
+            saving.
+          </p>
+
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            {HUE_PRESETS.map((p) => {
+              const active = form.accentHue === p.hue;
+              return (
+                <button
+                  key={p.hue}
+                  type="button"
+                  onClick={() => setForm((s) => (s ? { ...s, accentHue: p.hue } : s))}
+                  className={`group flex flex-col items-center gap-1.5 rounded-md p-2 border transition ${
+                    active ? "border-foreground/40 bg-muted/60" : "border-transparent hover:bg-muted/40"
+                  }`}
+                  data-testid={`hue-preset-${p.name.toLowerCase()}`}
+                >
+                  <div
+                    className="h-8 w-8 rounded-full ring-2 ring-offset-2 ring-offset-background"
+                    style={{
+                      background: `hsl(${p.hue} 42% 50%)`,
+                      // @ts-expect-error CSS var
+                      "--tw-ring-color": active ? `hsl(${p.hue} 42% 50%)` : "transparent",
+                    }}
+                  />
+                  <span className="text-[10px] font-medium text-muted-foreground">{p.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">Custom hue</Label>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {form.accentHue}°
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={360}
+              value={form.accentHue}
+              onChange={(e) =>
+                setForm((s) => (s ? { ...s, accentHue: Number(e.target.value) } : s))
+              }
+              className="w-full h-2 rounded-full appearance-none cursor-pointer"
+              style={{
+                background:
+                  "linear-gradient(to right, hsl(0 70% 50%), hsl(60 70% 50%), hsl(120 70% 50%), hsl(180 70% 50%), hsl(240 70% 50%), hsl(300 70% 50%), hsl(360 70% 50%))",
+              }}
+              data-testid="input-system-hue"
+            />
+          </div>
+
+          {/* Live preview swatches */}
+          <div className="grid grid-cols-3 gap-2 pt-2">
+            <div className="rounded-md p-3 text-xs text-white shadow-sm" style={{ background: `hsl(${form.accentHue} 38% 38%)` }}>
+              Primary
+            </div>
+            <div
+              className="rounded-md p-3 text-xs shadow-sm"
+              style={{
+                background: `hsl(${form.accentHue} 45% 92%)`,
+                color: `hsl(${form.accentHue} 50% 24%)`,
+              }}
+            >
+              Accent
+            </div>
+            <div
+              className="rounded-md p-3 text-xs text-white shadow-sm"
+              style={{ background: `hsl(${form.accentHue} 42% 58%)` }}
+            >
+              Sidebar
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Save bar */}
+      <div className="sticky bottom-2 z-10 flex items-center justify-end gap-2 rounded-lg border border-border/60 bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+        <span className="mr-auto text-[11px] text-muted-foreground">
+          {dirty ? "Unsaved changes" : "All changes saved"}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleReset}
+          disabled={!dirty || updateMutation.isPending}
+          data-testid="button-system-reset"
+        >
+          Reset
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!dirty || updateMutation.isPending}
+          data-testid="button-system-save"
+        >
+          {updateMutation.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+          ) : (
+            <Save className="h-3.5 w-3.5 mr-1" />
+          )}
+          Save settings
+        </Button>
+      </div>
+
+      {/* Password */}
+      <PasswordCard hasCustomPassword={data.hasCustomPassword} />
+    </div>
+  );
+}
+
+function PasswordCard({ hasCustomPassword }: { hasCustomPassword: boolean }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const changeMutation = useChangePassword();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNext, setShowNext] = useState(false);
+
+  const submit = () => {
+    if (next.length < 6) {
+      toast({ title: "New password too short", description: "Use at least 6 characters.", variant: "destructive" });
+      return;
+    }
+    if (next !== confirm) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    changeMutation.mutate(
+      { data: { currentPassword: current, newPassword: next } },
+      {
+        onSuccess: () => {
+          setCurrent("");
+          setNext("");
+          setConfirm("");
+          queryClient.invalidateQueries({ queryKey: getGetSystemSettingsQueryKey() });
+          toast({ title: "Password updated" });
+        },
+        onError: (err: unknown) => {
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          toast({
+            title: status === 401 ? "Current password is incorrect" : "Failed to update password",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-3.5 w-3.5 text-amber-500" />
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+            Security
+          </span>
+        </div>
+        <h2 className="text-xl font-semibold tracking-tight -mt-3">Change password</h2>
+        <p className="text-xs text-muted-foreground -mt-2">
+          {hasCustomPassword
+            ? "A custom password is currently in use."
+            : "You're still using the initial environment password. Set a new one to take ownership."}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Current password</Label>
+            <div className="relative">
+              <Input
+                type={showCurrent ? "text" : "password"}
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+                autoComplete="current-password"
+                data-testid="input-current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showCurrent ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">New password</Label>
+            <div className="relative">
+              <Input
+                type={showNext ? "text" : "password"}
+                value={next}
+                onChange={(e) => setNext(e.target.value)}
+                autoComplete="new-password"
+                data-testid="input-new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNext((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showNext ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Confirm new password</Label>
+            <Input
+              type={showNext ? "text" : "password"}
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              autoComplete="new-password"
+              data-testid="input-confirm-password"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            onClick={submit}
+            disabled={!current || !next || !confirm || changeMutation.isPending}
+            data-testid="button-change-password"
+          >
+            {changeMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+            ) : (
+              <KeyRound className="h-3.5 w-3.5 mr-1" />
+            )}
+            Update password
+          </Button>
+        </div>
+      </CardContent>
     </Card>
   );
 }

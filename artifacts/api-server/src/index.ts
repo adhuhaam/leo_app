@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureSessionTable } from "./lib/session";
+import { ensureAppSettingsTable } from "./lib/bootstrap-app-settings";
 
 const rawPort = process.env["PORT"];
 
@@ -18,8 +19,9 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function main() {
   // Bootstrap the session table before accepting traffic so the very first
-  // login request can't race the schema migration.
-  await ensureSessionTable();
+  // login request can't race the schema migration. Same applies to the
+  // app_settings singleton row — auth reads from it on every login.
+  await Promise.all([ensureSessionTable(), ensureAppSettingsTable()]);
 
   app.listen(port, (err) => {
     if (err) {

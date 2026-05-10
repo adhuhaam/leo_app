@@ -14,6 +14,61 @@ export interface LoginInput {
   password: string;
 }
 
+export interface ChangePasswordInput {
+  /** @minLength 1 */
+  currentPassword: string;
+  /**
+   * @minLength 6
+   * @maxLength 200
+   */
+  newPassword: string;
+}
+
+export interface SystemSettings {
+  appName: string;
+  /**
+   * @minimum 0
+   * @maximum 360
+   */
+  accentHue: number;
+  companyName?: string | null;
+  companyAddress?: string | null;
+  companyPhone?: string | null;
+  companyEmail?: string | null;
+  companyWebsite?: string | null;
+  companyRegistrationNumber?: string | null;
+  /** Inline base64 data URL (PNG/JPEG, ≤600KB). */
+  logoImage?: string | null;
+  /** True if a DB-stored password override is set; false means env APP_PASSWORD is in use. */
+  hasCustomPassword: boolean;
+}
+
+export interface SystemSettingsInput {
+  /**
+   * @minLength 1
+   * @maxLength 60
+   */
+  appName?: string;
+  /**
+   * @minimum 0
+   * @maximum 360
+   */
+  accentHue?: number;
+  /** @maxLength 200 */
+  companyName?: string | null;
+  /** @maxLength 500 */
+  companyAddress?: string | null;
+  /** @maxLength 50 */
+  companyPhone?: string | null;
+  /** @maxLength 200 */
+  companyEmail?: string | null;
+  /** @maxLength 200 */
+  companyWebsite?: string | null;
+  /** @maxLength 100 */
+  companyRegistrationNumber?: string | null;
+  logoImage?: string | null;
+}
+
 export type LoaOptionCategory =
   (typeof LoaOptionCategory)[keyof typeof LoaOptionCategory];
 

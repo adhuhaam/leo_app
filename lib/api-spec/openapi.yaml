@@ -82,6 +82,55 @@ paths:
         "204":
           description: Logged out
 
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Update the application password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "204":
+          description: Password updated
+        "400":
+          description: Invalid input
+        "401":
+          description: Current password is incorrect
+
+  /system/settings:
+    get:
+      operationId: getSystemSettings
+      tags: [system]
+      summary: Read tenant system settings (app name, theme)
+      responses:
+        "200":
+          description: System settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemSettings"
+    patch:
+      operationId: updateSystemSettings
+      tags: [system]
+      summary: Update tenant system settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SystemSettingsInput"
+      responses:
+        "200":
+          description: Updated system settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemSettings"
+
   /passports:
     get:
       operationId: listPassports
@@ -834,6 +883,93 @@ components:
         password:
           type: string
           minLength: 1
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 6
+          maxLength: 200
+
+    SystemSettings:
+      type: object
+      required: [appName, accentHue, hasCustomPassword]
+      properties:
+        appName:
+          type: string
+        accentHue:
+          type: integer
+          minimum: 0
+          maximum: 360
+        companyName:
+          type: string
+          nullable: true
+        companyAddress:
+          type: string
+          nullable: true
+        companyPhone:
+          type: string
+          nullable: true
+        companyEmail:
+          type: string
+          nullable: true
+        companyWebsite:
+          type: string
+          nullable: true
+        companyRegistrationNumber:
+          type: string
+          nullable: true
+        logoImage:
+          type: string
+          nullable: true
+          description: Inline base64 data URL (PNG/JPEG, ≤600KB).
+        hasCustomPassword:
+          type: boolean
+          description: True if a DB-stored password override is set; false means env APP_PASSWORD is in use.
+
+    SystemSettingsInput:
+      type: object
+      properties:
+        appName:
+          type: string
+          minLength: 1
+          maxLength: 60
+        accentHue:
+          type: integer
+          minimum: 0
+          maximum: 360
+        companyName:
+          type: string
+          nullable: true
+          maxLength: 200
+        companyAddress:
+          type: string
+          nullable: true
+          maxLength: 500
+        companyPhone:
+          type: string
+          nullable: true
+          maxLength: 50
+        companyEmail:
+          type: string
+          nullable: true
+          maxLength: 200
+        companyWebsite:
+          type: string
+          nullable: true
+          maxLength: 200
+        companyRegistrationNumber:
+          type: string
+          nullable: true
+          maxLength: 100
+        logoImage:
+          type: string
+          nullable: true
 
     LoaOption:
       type: object

@@ -1,5 +1,15 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { LoginBody } from "@workspace/api-zod";
+import { scrypt as scryptCb, randomBytes, timingSafeEqual } from "node:crypto";
+import { promisify } from "node:util";
+import { eq } from "drizzle-orm";
+import { db, appSettingsTable } from "@workspace/db";
+import { LoginBody, ChangePasswordBody } from "@workspace/api-zod";
+
+const scrypt = promisify(scryptCb) as (
+  password: string,
+  salt: Buffer,
+  keylen: number,
+) => Promise<Buffer>;
 
 const APP_PASSWORD = process.env["APP_PASSWORD"];
 if (!APP_PASSWORD) {
@@ -8,17 +18,48 @@ if (!APP_PASSWORD) {
 
 const router: IRouter = Router();
 
+// Format: scrypt$<salt-hex>$<key-hex>
+async function hashPassword(plain: string): Promise<string> {
+  const salt = randomBytes(16);
+  const key = await scrypt(plain, salt, 64);
+  return `scrypt$${salt.toString("hex")}$${key.toString("hex")}`;
+}
+
+async function verifyPasswordHash(plain: string, stored: string): Promise<boolean> {
+  const parts = stored.split("$");
+  if (parts.length !== 3 || parts[0] !== "scrypt") return false;
+  const salt = Buffer.from(parts[1], "hex");
+  const expected = Buffer.from(parts[2], "hex");
+  const actual = await scrypt(plain, salt, expected.length);
+  if (actual.length !== expected.length) return false;
+  return timingSafeEqual(actual, expected);
+}
+
+// Look up the override hash if one has been set; otherwise fall back to the
+// APP_PASSWORD env var (used for fresh installs).
+async function checkPassword(plain: string): Promise<boolean> {
+  const rows = await db
+    .select({ hash: appSettingsTable.passwordHash })
+    .from(appSettingsTable)
+    .where(eq(appSettingsTable.id, 1))
+    .limit(1);
+  const stored = rows[0]?.hash;
+  if (stored) return verifyPasswordHash(plain, stored);
+  return plain === APP_PASSWORD;
+}
+
 router.get("/auth/me", (req, res) => {
   res.json({ authenticated: Boolean(req.session?.authenticated) });
 });
 
-router.post("/auth/login", (req, res) => {
+router.post("/auth/login", async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(401).json({ error: "Invalid password" });
     return;
   }
-  if (parsed.data.password !== APP_PASSWORD) {
+  const ok = await checkPassword(parsed.data.password);
+  if (!ok) {
     req.log.warn({ ip: req.ip }, "Failed login attempt");
     res.status(401).json({ error: "Invalid password" });
     return;
@@ -52,6 +93,32 @@ router.post("/auth/logout", (req, res) => {
     res.clearCookie("leo.sid");
     res.sendStatus(204);
   });
+});
+
+router.post("/auth/change-password", async (req, res): Promise<void> => {
+  if (!req.session?.authenticated) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const parsed = ChangePasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { currentPassword, newPassword } = parsed.data;
+  const ok = await checkPassword(currentPassword);
+  if (!ok) {
+    res.status(401).json({ error: "Current password is incorrect" });
+    return;
+  }
+  const hash = await hashPassword(newPassword);
+  // Make sure the singleton row exists, then update the hash.
+  await db.insert(appSettingsTable).values({ id: 1 }).onConflictDoNothing();
+  await db
+    .update(appSettingsTable)
+    .set({ passwordHash: hash })
+    .where(eq(appSettingsTable.id, 1));
+  res.sendStatus(204);
 });
 
 /**

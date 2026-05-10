@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@workspace/api-client-react";
 import leoLogo from "@assets/image_1778408412841.png";
+import { useSystemSettings } from "@/hooks/use-system-settings";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
@@ -32,14 +33,29 @@ const navItems = [
 function BrandMark({ size = "default" }: { size?: "default" | "small" }) {
   const dim = size === "small" ? "h-7 w-7" : "h-8 w-8";
   const text = size === "small" ? "text-sm" : "text-base";
+  const { appName, logoImage } = useSystemSettings();
+  const initial = (appName.trim()[0] ?? "L").toUpperCase();
   return (
     <div className="flex items-center gap-2.5">
-      <div className={`${dim} relative flex-shrink-0 rounded-lg bg-gradient-to-br from-[hsl(162_45%_55%)] via-[hsl(165_40%_45%)] to-[hsl(170_35%_30%)] flex items-center justify-center shadow-[0_4px_12px_-2px_rgba(60,140,120,0.5)]`}>
-        <span className="font-extrabold text-white text-[11px] tracking-tighter">L</span>
-        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-300 ring-2 ring-sidebar" />
+      <div
+        className={`${dim} relative flex-shrink-0 rounded-lg flex items-center justify-center shadow-[0_4px_12px_-2px_rgba(60,140,120,0.5)] overflow-hidden`}
+        style={{
+          background: logoImage
+            ? "transparent"
+            : "linear-gradient(135deg, hsl(var(--brand-grad-from)), hsl(var(--brand-grad-via)), hsl(var(--brand-grad-to)))",
+        }}
+      >
+        {logoImage ? (
+          <img src={logoImage} alt={appName} className="h-full w-full object-cover" />
+        ) : (
+          <>
+            <span className="font-extrabold text-white text-[11px] tracking-tighter">{initial}</span>
+            <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-300 ring-2 ring-sidebar" />
+          </>
+        )}
       </div>
       <div className="flex flex-col leading-tight">
-        <span className={`${text} font-bold tracking-tight text-black`}>LEO OS</span>
+        <span className={`${text} font-bold tracking-tight text-black`}>{appName}</span>
       </div>
     </div>
   );

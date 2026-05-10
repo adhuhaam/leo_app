@@ -31,6 +31,134 @@ export const LoginBody = zod.object({
 });
 
 /**
+ * @summary Update the application password
+ */
+
+export const changePasswordBodyNewPasswordMin = 6;
+export const changePasswordBodyNewPasswordMax = 200;
+
+export const ChangePasswordBody = zod.object({
+  currentPassword: zod.string().min(1),
+  newPassword: zod
+    .string()
+    .min(changePasswordBodyNewPasswordMin)
+    .max(changePasswordBodyNewPasswordMax),
+});
+
+/**
+ * @summary Read tenant system settings (app name, theme)
+ */
+export const getSystemSettingsResponseAccentHueMin = 0;
+export const getSystemSettingsResponseAccentHueMax = 360;
+
+export const GetSystemSettingsResponse = zod.object({
+  appName: zod.string(),
+  accentHue: zod
+    .number()
+    .min(getSystemSettingsResponseAccentHueMin)
+    .max(getSystemSettingsResponseAccentHueMax),
+  companyName: zod.string().nullish(),
+  companyAddress: zod.string().nullish(),
+  companyPhone: zod.string().nullish(),
+  companyEmail: zod.string().nullish(),
+  companyWebsite: zod.string().nullish(),
+  companyRegistrationNumber: zod.string().nullish(),
+  logoImage: zod
+    .string()
+    .nullish()
+    .describe("Inline base64 data URL (PNG\/JPEG, ≤600KB)."),
+  hasCustomPassword: zod
+    .boolean()
+    .describe(
+      "True if a DB-stored password override is set; false means env APP_PASSWORD is in use.",
+    ),
+});
+
+/**
+ * @summary Update tenant system settings
+ */
+export const updateSystemSettingsBodyAppNameMax = 60;
+
+export const updateSystemSettingsBodyAccentHueMin = 0;
+export const updateSystemSettingsBodyAccentHueMax = 360;
+
+export const updateSystemSettingsBodyCompanyNameMax = 200;
+
+export const updateSystemSettingsBodyCompanyAddressMax = 500;
+
+export const updateSystemSettingsBodyCompanyPhoneMax = 50;
+
+export const updateSystemSettingsBodyCompanyEmailMax = 200;
+
+export const updateSystemSettingsBodyCompanyWebsiteMax = 200;
+
+export const updateSystemSettingsBodyCompanyRegistrationNumberMax = 100;
+
+export const UpdateSystemSettingsBody = zod.object({
+  appName: zod
+    .string()
+    .min(1)
+    .max(updateSystemSettingsBodyAppNameMax)
+    .optional(),
+  accentHue: zod
+    .number()
+    .min(updateSystemSettingsBodyAccentHueMin)
+    .max(updateSystemSettingsBodyAccentHueMax)
+    .optional(),
+  companyName: zod
+    .string()
+    .max(updateSystemSettingsBodyCompanyNameMax)
+    .nullish(),
+  companyAddress: zod
+    .string()
+    .max(updateSystemSettingsBodyCompanyAddressMax)
+    .nullish(),
+  companyPhone: zod
+    .string()
+    .max(updateSystemSettingsBodyCompanyPhoneMax)
+    .nullish(),
+  companyEmail: zod
+    .string()
+    .max(updateSystemSettingsBodyCompanyEmailMax)
+    .nullish(),
+  companyWebsite: zod
+    .string()
+    .max(updateSystemSettingsBodyCompanyWebsiteMax)
+    .nullish(),
+  companyRegistrationNumber: zod
+    .string()
+    .max(updateSystemSettingsBodyCompanyRegistrationNumberMax)
+    .nullish(),
+  logoImage: zod.string().nullish(),
+});
+
+export const updateSystemSettingsResponseAccentHueMin = 0;
+export const updateSystemSettingsResponseAccentHueMax = 360;
+
+export const UpdateSystemSettingsResponse = zod.object({
+  appName: zod.string(),
+  accentHue: zod
+    .number()
+    .min(updateSystemSettingsResponseAccentHueMin)
+    .max(updateSystemSettingsResponseAccentHueMax),
+  companyName: zod.string().nullish(),
+  companyAddress: zod.string().nullish(),
+  companyPhone: zod.string().nullish(),
+  companyEmail: zod.string().nullish(),
+  companyWebsite: zod.string().nullish(),
+  companyRegistrationNumber: zod.string().nullish(),
+  logoImage: zod
+    .string()
+    .nullish()
+    .describe("Inline base64 data URL (PNG\/JPEG, ≤600KB)."),
+  hasCustomPassword: zod
+    .boolean()
+    .describe(
+      "True if a DB-stored password override is set; false means env APP_PASSWORD is in use.",
+    ),
+});
+
+/**
  * @summary List all passport records
  */
 export const ListPassportsQueryParams = zod.object({

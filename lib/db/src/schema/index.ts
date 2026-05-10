@@ -25,3 +25,4 @@ export * from "./clients";
 export * from "./expense-categories";
 export * from "./expenses";
 export * from "./billing";
+export * from "./app-settings";

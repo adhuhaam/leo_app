@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/app-layout";
 import { AuthGate } from "@/components/auth-gate";
+import { useApplySystemSettings } from "@/hooks/use-system-settings";
 import Dashboard from "@/pages/dashboard";
 import UploadPage from "@/pages/upload";
 import MasterListPage from "@/pages/master-list";
@@ -18,6 +19,8 @@ import SettingsPage from "@/pages/settings";
 const queryClient = new QueryClient();
 
 function Router() {
+  // Sync persisted system settings (theme + title) into the live document.
+  useApplySystemSettings();
   return (
     <AuthGate>
       <AppLayout>
