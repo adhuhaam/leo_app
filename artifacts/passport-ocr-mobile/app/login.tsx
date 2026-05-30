@@ -20,19 +20,20 @@ import { useAuth } from "@/lib/auth";
 export default function LoginScreen() {
   const colors = useColors();
   const { login } = useAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function onSubmit() {
-    if (!password.trim() || submitting) return;
+    if (!email.trim() || !password.trim() || submitting) return;
     setSubmitting(true);
     try {
-      await login(password.trim());
+      await login(email.trim(), password.trim());
       router.replace("/");
     } catch (err) {
       Alert.alert(
         "Sign in failed",
-        err instanceof Error ? err.message : "Invalid password.",
+        err instanceof Error ? err.message : "Invalid email or password.",
       );
     } finally {
       setSubmitting(false);
@@ -49,17 +50,31 @@ export default function LoginScreen() {
         style={styles.flex}
       >
         <View style={styles.content}>
-          <View
-            style={[styles.logo, { backgroundColor: colors.primary }]}
-          >
+          <View style={[styles.logo, { backgroundColor: colors.primary }]}>
             <Feather name="shield" size={28} color={colors.primaryForeground} />
           </View>
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            Passport OCR
-          </Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>LEO OS</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Enter the shared workspace password to continue.
+            Sign in with your staff account.
           </Text>
+
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email"
+            placeholderTextColor={colors.mutedForeground}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                color: colors.foreground,
+              },
+            ]}
+          />
 
           <TextInput
             value={password}
@@ -83,13 +98,13 @@ export default function LoginScreen() {
 
           <Pressable
             onPress={onSubmit}
-            disabled={!password.trim() || submitting}
+            disabled={!email.trim() || !password.trim() || submitting}
             style={({ pressed }) => [
               styles.btn,
               {
                 backgroundColor: colors.primary,
                 opacity:
-                  !password.trim() || submitting ? 0.5 : pressed ? 0.85 : 1,
+                  !email.trim() || !password.trim() || submitting ? 0.5 : pressed ? 0.85 : 1,
               },
             ]}
           >

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   useListPassports,
   useListLoa,
@@ -45,6 +45,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Search, Filter, MoreHorizontal, Pencil, Trash2, Loader2, Users, X } from "lucide-react";
+import { getAccessToken } from "@/lib/supabase";
+
+type DeploymentType = { id: number; slug: string; name: string };
 
 type StatusFilter = "all" | "completed" | "processing" | "failed";
 type NationalityFilter = "all" | "bangladesh" | "india";
@@ -64,6 +67,18 @@ export default function MasterListPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   // Combined filter: by allocated client OR by LOA-issuing company.
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>("all");
+  const [deploymentTypeFilter, setDeploymentTypeFilter] = useState<string>("all");
+  const [deploymentTypes, setDeploymentTypes] = useState<DeploymentType[]>([]);
+
+  useEffect(() => {
+    getAccessToken().then(async (token) => {
+      if (!token) return;
+      const res = await fetch("/api/deployment-types", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setDeploymentTypes(await res.json());
+    });
+  }, []);
 
   const [editPassport, setEditPassport] = useState<Passport | null>(null);
   const [deletePassportId, setDeletePassportId] = useState<number | null>(null);
@@ -81,6 +96,11 @@ export default function MasterListPage() {
       ? { clientId: allocationFilter.slice("client:".length) }
       : allocationFilter === "unallocated"
         ? { clientId: "none" }
+        : {}),
+    ...(deploymentTypeFilter === "none"
+      ? { deploymentTypeId: "none" }
+      : deploymentTypeFilter !== "all"
+        ? { deploymentTypeId: deploymentTypeFilter }
         : {}),
   };
   const { data: passports = [], isLoading } = useListPassports(passportParams, {
@@ -136,13 +156,15 @@ export default function MasterListPage() {
     (search ? 1 : 0) +
     (nationalityFilter !== "all" ? 1 : 0) +
     (statusFilter !== "all" ? 1 : 0) +
-    (allocationFilter !== "all" ? 1 : 0);
+    (allocationFilter !== "all" ? 1 : 0) +
+    (deploymentTypeFilter !== "all" ? 1 : 0);
 
   const clearFilters = () => {
     setSearch("");
     setNationalityFilter("all");
     setStatusFilter("all");
     setAllocationFilter("all");
+    setDeploymentTypeFilter("all");
   };
 
   const deleteMutation = useDeletePassport();
@@ -253,6 +275,21 @@ export default function MasterListPage() {
                   </SelectContent>
                 </Select>
 
+                <Select value={deploymentTypeFilter} onValueChange={setDeploymentTypeFilter}>
+                  <SelectTrigger className="md:w-[180px]" data-testid="select-deployment-type-filter">
+                    <SelectValue placeholder="Deployment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="none">— Unclassified —</SelectItem>
+                    {deploymentTypes.map((dt) => (
+                      <SelectItem key={dt.id} value={String(dt.id)}>
+                        {dt.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 {activeFilterCount > 0 && (
                   <Button
                     variant="ghost"
@@ -278,6 +315,7 @@ export default function MasterListPage() {
                   <TableHead className="hidden md:table-cell">Nationality</TableHead>
                   <TableHead className="hidden xl:table-cell">Expiry</TableHead>
                   <TableHead>Allocation</TableHead>
+                  <TableHead className="hidden lg:table-cell">Type</TableHead>
                   <TableHead className="hidden lg:table-cell">Work Permit #</TableHead>
                   <TableHead className="hidden lg:table-cell">Agent</TableHead>
                   <TableHead className="hidden md:table-cell">LOA Company</TableHead>
@@ -290,7 +328,7 @@ export default function MasterListPage() {
                 {isLoading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 11 }).map((_, j) => (
+                      {Array.from({ length: 12 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-5 w-20 bg-muted animate-pulse rounded" />
                         </TableCell>
@@ -299,7 +337,7 @@ export default function MasterListPage() {
                   ))
                 ) : filteredRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={12} className="h-32 text-center text-muted-foreground">
                       {passports.length === 0
                         ? "No candidates yet — upload a passport from the Process Document page."
                         : "No candidates match your filters."}
@@ -322,6 +360,9 @@ export default function MasterListPage() {
                         ) : (
                           <span className="text-muted-foreground italic text-xs">— Unallocated —</span>
                         )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                        {(passport as Passport & { deploymentTypeName?: string }).deploymentTypeName ?? "—"}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell font-mono text-xs">
                         {passport.workPermitNumber || <span className="text-muted-foreground">—</span>}
@@ -446,8 +487,18 @@ function EditCandidateDialog({
   const queryClient = useQueryClient();
   const updateMutation = useUpdatePassport();
   const { data: clients = [] } = useListClients();
+  const [deploymentTypes, setDeploymentTypes] = useState<DeploymentType[]>([]);
 
-  // "" sentinel for "Unallocated" — we translate to null on save.
+  useEffect(() => {
+    getAccessToken().then(async (token) => {
+      if (!token) return;
+      const res = await fetch("/api/deployment-types", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setDeploymentTypes(await res.json());
+    });
+  }, []);
+
   const [form, setForm] = useState({
     fullName: passport.fullName || "",
     passportNumber: passport.passportNumber || "",
@@ -457,16 +508,21 @@ function EditCandidateDialog({
     dateOfExpiry: passport.dateOfExpiry || "",
     address: passport.address || "",
     clientId: passport.clientId != null ? String(passport.clientId) : "",
+    deploymentTypeId:
+      (passport as Passport & { deploymentTypeId?: number | null }).deploymentTypeId != null
+        ? String((passport as Passport & { deploymentTypeId?: number | null }).deploymentTypeId)
+        : "",
     workPermitNumber: passport.workPermitNumber || "",
     agent: passport.agent || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { clientId, workPermitNumber, agent, ...rest } = form;
+    const { clientId, deploymentTypeId, workPermitNumber, agent, ...rest } = form;
     const payload = {
       ...rest,
       clientId: clientId === "" ? null : Number(clientId),
+      deploymentTypeId: deploymentTypeId === "" ? null : Number(deploymentTypeId),
       workPermitNumber: workPermitNumber.trim() ? workPermitNumber.trim() : null,
       agent: agent.trim() ? agent.trim() : null,
     };
@@ -596,6 +652,27 @@ function EditCandidateDialog({
                     No clients yet — add one from the Clients page first.
                   </p>
                 )}
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Deployment Type</Label>
+                <Select
+                  value={form.deploymentTypeId === "" ? "__none__" : form.deploymentTypeId}
+                  onValueChange={(v) =>
+                    setForm({ ...form, deploymentTypeId: v === "__none__" ? "" : v })
+                  }
+                >
+                  <SelectTrigger data-testid="select-edit-deployment-type">
+                    <SelectValue placeholder="Recruitment, casual worker, etc." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Unclassified —</SelectItem>
+                    {deploymentTypes.map((dt) => (
+                      <SelectItem key={dt.id} value={String(dt.id)}>
+                        {dt.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Work Permit Number</Label>

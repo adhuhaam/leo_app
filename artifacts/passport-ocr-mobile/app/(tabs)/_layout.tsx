@@ -4,9 +4,11 @@ import React from "react";
 import { Platform } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 export default function TabLayout() {
   const colors = useColors();
+  const { hasPermission } = useAuth();
   const isWeb = Platform.OS === "web";
 
   return (
@@ -47,6 +49,7 @@ export default function TabLayout() {
         name="master"
         options={{
           title: "Master",
+          href: hasPermission("passports.read") ? undefined : null,
           tabBarIcon: ({ color }) => (
             <Feather name="users" size={22} color={color} />
           ),
@@ -56,6 +59,7 @@ export default function TabLayout() {
         name="upload"
         options={{
           title: "Capture",
+          href: hasPermission("passports.write") ? undefined : null,
           tabBarIcon: ({ color }) => (
             <Feather name="camera" size={22} color={color} />
           ),
@@ -65,6 +69,7 @@ export default function TabLayout() {
         name="billing"
         options={{
           title: "Billing",
+          href: hasPermission("billing.read") ? undefined : null,
           tabBarIcon: ({ color }) => (
             <Feather name="file-text" size={22} color={color} />
           ),

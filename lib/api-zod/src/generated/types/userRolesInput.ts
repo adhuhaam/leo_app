@@ -6,6 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GetAuthStatus200 = {
-  authenticated: boolean;
-};
+export interface UserRolesInput {
+  roleSlugs: string[];
+}

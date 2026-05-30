@@ -14,20 +14,20 @@ import {
   LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQueryClient } from "@tanstack/react-query";
-import { logout } from "@workspace/api-client-react";
 import leoLogo from "@assets/image_1778408412841.png";
 import { useSystemSettings } from "@/hooks/use-system-settings";
+import { useAuth } from "@/context/auth";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
-  { href: "/upload", label: "Process Document", icon: UploadCloud, group: "Operations" },
-  { href: "/master-list", label: "Master List", icon: Users, group: "Operations" },
-  { href: "/clients", label: "Clients", icon: Building, group: "Operations" },
-  { href: "/loa", label: "Letter of Appointment", icon: FileSignature, group: "Operations" },
-  { href: "/expenses", label: "Expenses", icon: Wallet, group: "Operations" },
-  { href: "/billing", label: "Invoices & Quotes", icon: Receipt, group: "Operations" },
-  { href: "/settings", label: "Settings", icon: Settings, group: "System" },
+const allNavItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview", permission: "dashboard.read" },
+  { href: "/upload", label: "Process Document", icon: UploadCloud, group: "Operations", permission: "passports.write" },
+  { href: "/master-list", label: "Master List", icon: Users, group: "Operations", permission: "passports.read" },
+  { href: "/clients", label: "Clients", icon: Building, group: "Operations", permission: "clients.read" },
+  { href: "/loa", label: "Letter of Appointment", icon: FileSignature, group: "Operations", permission: "loa.read" },
+  { href: "/expenses", label: "Expenses", icon: Wallet, group: "Operations", permission: "expenses.read" },
+  { href: "/billing", label: "Invoices & Quotes", icon: Receipt, group: "Operations", permission: "billing.read" },
+  { href: "/users", label: "Users", icon: Users, group: "System", permission: "users.read" },
+  { href: "/settings", label: "Settings", icon: Settings, group: "System", permission: "settings.admin" },
 ];
 
 function BrandMark({ size = "default" }: { size?: "default" | "small" }) {
@@ -63,6 +63,9 @@ function BrandMark({ size = "default" }: { size?: "default" | "small" }) {
 
 function SidebarNav({ onClose }: { onClose?: () => void }) {
   const [location] = useLocation();
+  const { hasPermission } = useAuth();
+
+  const navItems = allNavItems.filter((item) => hasPermission(item.permission));
 
   const groups = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
     (acc[item.group] ||= []).push(item);
@@ -121,19 +124,10 @@ function SidebarNav({ onClose }: { onClose?: () => void }) {
 }
 
 function LogoutButton() {
-  const qc = useQueryClient();
-  async function onClick() {
-    try {
-      await logout();
-    } catch {
-      // ignore — we still want to clear local state
-    }
-    await qc.invalidateQueries({ queryKey: ["/auth/me"] });
-    qc.clear();
-  }
+  const { signOut } = useAuth();
   return (
     <button
-      onClick={onClick}
+      onClick={() => signOut()}
       className="w-full flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[12px] font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition"
       data-testid="button-logout"
     >

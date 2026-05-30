@@ -22,6 +22,8 @@ export interface BillingDocumentInput {
   gstInclusive?: boolean;
   notes?: string;
   status?: string;
+  /** @nullable */
+  deploymentTypeId?: number | null;
   /** @minItems 1 */
   items: BillingItemInput[];
 }

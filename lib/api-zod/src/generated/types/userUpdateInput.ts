@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface LoginInput {
-  /** @minLength 1 */
-  password: string;
+export interface UserUpdateInput {
+  fullName?: string;
+  isActive?: boolean;
 }

@@ -8,10 +8,11 @@ import {
   UpdateLoaOptionParams,
   UpdateLoaOptionBody,
 } from "@workspace/api-zod";
+import { requirePermission } from "../lib/rbac";
 
 const router: IRouter = Router();
 
-router.get("/loa-options", async (req, res): Promise<void> => {
+router.get("/loa-options", requirePermission("loa.read"), async (req, res): Promise<void> => {
   const parsed = ListLoaOptionsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -26,7 +27,7 @@ router.get("/loa-options", async (req, res): Promise<void> => {
   res.json(rows);
 });
 
-router.post("/loa-options", async (req, res): Promise<void> => {
+router.post("/loa-options", requirePermission("loa.write"), async (req, res): Promise<void> => {
   const parsed = CreateLoaOptionBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -76,7 +77,7 @@ router.post("/loa-options", async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/loa-options/:id", async (req, res): Promise<void> => {
+router.patch("/loa-options/:id", requirePermission("loa.write"), async (req, res): Promise<void> => {
   const params = UpdateLoaOptionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -135,7 +136,7 @@ router.patch("/loa-options/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/loa-options/:id", async (req, res): Promise<void> => {
+router.delete("/loa-options/:id", requirePermission("loa.delete"), async (req, res): Promise<void> => {
   const params = DeleteLoaOptionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

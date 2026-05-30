@@ -15,13 +15,14 @@ import {
   useDeleteExpenseCategory,
   useGetSystemSettings,
   useUpdateSystemSettings,
-  useChangePassword,
   getListLoaOptionsQueryKey,
   getListCompaniesQueryKey,
   getListExpenseCategoriesQueryKey,
   getGetSystemSettingsQueryKey,
 } from "@workspace/api-client-react";
 import type { LoaOption, Company, ExpenseCategory } from "@workspace/api-client-react";
+import { useAuth } from "@/context/auth";
+import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1883,22 +1884,23 @@ function SystemSection() {
       </div>
 
       {/* Password */}
-      <PasswordCard hasCustomPassword={data.hasCustomPassword} />
+      <PasswordCard />
     </div>
   );
 }
 
-function PasswordCard({ hasCustomPassword }: { hasCustomPassword: boolean }) {
-  const queryClient = useQueryClient();
+function PasswordCard() {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const changeMutation = useChangePassword();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const submit = () => {
+  const submit = async () => {
+    if (!user?.email) return;
     if (next.length < 6) {
       toast({ title: "New password too short", description: "Use at least 6 characters.", variant: "destructive" });
       return;
@@ -1907,25 +1909,27 @@ function PasswordCard({ hasCustomPassword }: { hasCustomPassword: boolean }) {
       toast({ title: "Passwords do not match", variant: "destructive" });
       return;
     }
-    changeMutation.mutate(
-      { data: { currentPassword: current, newPassword: next } },
-      {
-        onSuccess: () => {
-          setCurrent("");
-          setNext("");
-          setConfirm("");
-          queryClient.invalidateQueries({ queryKey: getGetSystemSettingsQueryKey() });
-          toast({ title: "Password updated" });
-        },
-        onError: (err: unknown) => {
-          const status = (err as { response?: { status?: number } })?.response?.status;
-          toast({
-            title: status === 401 ? "Current password is incorrect" : "Failed to update password",
-            variant: "destructive",
-          });
-        },
+    setSaving(true);
+    try {
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: current,
+      });
+      if (verifyErr) {
+        toast({ title: "Current password is incorrect", variant: "destructive" });
+        return;
       }
-    );
+      const { error } = await supabase.auth.updateUser({ password: next });
+      if (error) throw error;
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+      toast({ title: "Password updated" });
+    } catch {
+      toast({ title: "Failed to update password", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -1939,9 +1943,7 @@ function PasswordCard({ hasCustomPassword }: { hasCustomPassword: boolean }) {
         </div>
         <h2 className="text-xl font-semibold tracking-tight -mt-3">Change password</h2>
         <p className="text-xs text-muted-foreground -mt-2">
-          {hasCustomPassword
-            ? "A custom password is currently in use."
-            : "You're still using the initial environment password. Set a new one to take ownership."}
+          Update your Supabase account password for {user?.email}.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2001,10 +2003,10 @@ function PasswordCard({ hasCustomPassword }: { hasCustomPassword: boolean }) {
           <Button
             size="sm"
             onClick={submit}
-            disabled={!current || !next || !confirm || changeMutation.isPending}
+            disabled={!current || !next || !confirm || saving}
             data-testid="button-change-password"
           >
-            {changeMutation.isPending ? (
+            {saving ? (
               <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
             ) : (
               <KeyRound className="h-3.5 w-3.5 mr-1" />

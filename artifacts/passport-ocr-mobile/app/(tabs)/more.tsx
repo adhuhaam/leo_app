@@ -1,6 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { useLogout } from "@workspace/api-client-react";
 import { router } from "expo-router";
 import React from "react";
 import {
@@ -24,13 +22,16 @@ type Item = {
 
 export default function MoreScreen() {
   const colors = useColors();
-  const qc = useQueryClient();
-  const { refresh } = useAuth();
-  const logoutMutation = useLogout();
+  const { logout, hasPermission } = useAuth();
+  const [signingOut, setSigningOut] = React.useState(false);
 
   const items: Item[] = [
-    { icon: "users", label: "Clients", detail: "Browse client directory", route: "/clients" },
-    { icon: "dollar-sign", label: "Expenses", detail: "Track operational spend", route: "/expenses" },
+    ...(hasPermission("clients.read")
+      ? [{ icon: "users" as const, label: "Clients", detail: "Browse client directory", route: "/clients" }]
+      : []),
+    ...(hasPermission("expenses.read")
+      ? [{ icon: "dollar-sign" as const, label: "Expenses", detail: "Track operational spend", route: "/expenses" }]
+      : []),
   ];
 
   function handleLogout() {
@@ -40,14 +41,13 @@ export default function MoreScreen() {
         text: "Sign out",
         style: "destructive",
         onPress: async () => {
+          setSigningOut(true);
           try {
-            await logoutMutation.mutateAsync();
-          } catch {
-            // ignore — clear client state regardless
+            await logout();
+          } finally {
+            setSigningOut(false);
+            router.replace("/login");
           }
-          await qc.clear();
-          await refresh();
-          router.replace("/login");
         },
       },
     ]);
@@ -94,13 +94,13 @@ export default function MoreScreen() {
 
       <Pressable
         onPress={handleLogout}
-        disabled={logoutMutation.isPending}
+        disabled={signingOut}
         style={({ pressed }) => [
           styles.logoutBtn,
           {
             backgroundColor: colors.card,
             borderColor: colors.destructive,
-            opacity: logoutMutation.isPending ? 0.5 : pressed ? 0.85 : 1,
+            opacity: signingOut ? 0.5 : pressed ? 0.85 : 1,
           },
         ]}
       >

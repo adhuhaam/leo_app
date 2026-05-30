@@ -20,4 +20,6 @@ export interface PassportUpdate {
   workPermitNumber?: string | null;
   /** @nullable */
   agent?: string | null;
+  /** @nullable */
+  deploymentTypeId?: number | null;
 }

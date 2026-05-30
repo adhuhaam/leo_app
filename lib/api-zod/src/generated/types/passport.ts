@@ -45,6 +45,16 @@ export interface Passport {
   workPermitNumber?: string | null;
   /** @nullable */
   agent?: string | null;
+  /**
+   * Deployment category (recruitment, casual worker, etc.)
+   * @nullable
+   */
+  deploymentTypeId?: number | null;
+  /**
+   * Joined deployment type name for display
+   * @nullable
+   */
+  deploymentTypeName?: string | null;
   createdAt: string;
   updatedAt: string;
 }

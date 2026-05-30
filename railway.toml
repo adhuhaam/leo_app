@@ -1,0 +1,11 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "pnpm install && pnpm --filter @workspace/api-server run build"
+
+[deploy]
+startCommand = "pnpm --filter @workspace/api-server run start"
+healthcheckPath = "/api/healthz"
+restartPolicyType = "ON_FAILURE"
+
+# Set in Railway dashboard:
+# DATABASE_URL, SUPABASE_URL, NODE_ENV=production, PORT=8080, DEV_AUTH=false

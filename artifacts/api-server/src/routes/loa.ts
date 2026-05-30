@@ -9,15 +9,16 @@ import {
   UpdateLoaBody,
   DeleteLoaParams,
 } from "@workspace/api-zod";
+import { requirePermission } from "../lib/rbac";
 
 const router: IRouter = Router();
 
-router.get("/loa", async (_req, res): Promise<void> => {
+router.get("/loa", requirePermission("loa.read"), async (_req, res): Promise<void> => {
   const entries = await db.select().from(loaTable).orderBy(desc(loaTable.createdAt));
   res.json(entries);
 });
 
-router.post("/loa", async (req, res): Promise<void> => {
+router.post("/loa", requirePermission("loa.write"), async (req, res): Promise<void> => {
   const parsed = CreateLoaBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -27,7 +28,7 @@ router.post("/loa", async (req, res): Promise<void> => {
   res.status(201).json(loa);
 });
 
-router.get("/loa/:id", async (req, res): Promise<void> => {
+router.get("/loa/:id", requirePermission("loa.read"), async (req, res): Promise<void> => {
   const params = GetLoaParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -41,7 +42,7 @@ router.get("/loa/:id", async (req, res): Promise<void> => {
   res.json(loa);
 });
 
-router.patch("/loa/:id", async (req, res): Promise<void> => {
+router.patch("/loa/:id", requirePermission("loa.write"), async (req, res): Promise<void> => {
   const params = UpdateLoaParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -64,7 +65,7 @@ router.patch("/loa/:id", async (req, res): Promise<void> => {
   res.json(loa);
 });
 
-router.delete("/loa/:id", async (req, res): Promise<void> => {
+router.delete("/loa/:id", requirePermission("loa.delete"), async (req, res): Promise<void> => {
   const params = DeleteLoaParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -82,7 +83,7 @@ router.delete("/loa/:id", async (req, res): Promise<void> => {
 });
 
 // PDF generation endpoint
-router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
+router.get("/loa/:id/pdf", requirePermission("loa.read"), async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
   if (isNaN(id)) {

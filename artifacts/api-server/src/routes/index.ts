@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
-import authRouter, { requireAuth } from "./auth";
+import devAuthRouter from "./dev-auth";
+import authRouter, { requireAuth, usersRouter } from "./auth";
 import passportsRouter from "./passports";
 import companiesRouter from "./companies";
 import clientsRouter from "./clients";
@@ -9,19 +10,30 @@ import expensesRouter from "./expenses";
 import loaRouter from "./loa";
 import loaOptionsRouter from "./loa-options";
 import billingRouter from "./billing";
-import systemRouter from "./system";
+import systemPublicRouter, { systemProtectedRouter } from "./system";
+import deploymentTypesRouter from "./deployment-types";
+import { authenticateJwt } from "../lib/auth";
+import { loadUserProfile } from "../lib/rbac";
 
 const router: IRouter = Router();
 
-// Public routes (no auth required)
+// Public routes
 router.use(healthRouter);
-router.use(authRouter);
-// /system/settings GET is public so the login screen can show the right brand
-// name & logo. The PATCH inside this router self-checks for auth.
-router.use(systemRouter);
+router.use(devAuthRouter);
+router.use(systemPublicRouter);
 
-// Everything below requires a valid session
+// JWT auth chain for all protected routes
+router.use(authenticateJwt);
+router.use(loadUserProfile);
+
+// Auth status (requires valid JWT)
+router.use(authRouter);
+router.use(usersRouter);
+
+// Protected business routes
 router.use(requireAuth);
+router.use(systemProtectedRouter);
+router.use(deploymentTypesRouter);
 router.use(passportsRouter);
 router.use(companiesRouter);
 router.use(clientsRouter);

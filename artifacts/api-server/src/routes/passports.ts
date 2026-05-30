@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { eq, sql, desc, isNull } from "drizzle-orm";
-import { db, passportsTable, clientsTable } from "@workspace/db";
+import { db, passportsTable, clientsTable, deploymentTypesTable } from "@workspace/db";
 import {
   GetPassportParams,
   UpdatePassportParams,
@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-zod";
 import { extractPassportData } from "../lib/ocr";
 import { logger } from "../lib/logger";
+import { requirePermission } from "../lib/rbac";
 import { fromPath } from "pdf2pic";
 import sharp from "sharp";
 import path from "path";
@@ -77,14 +78,14 @@ async function bufferToBase64Image(
 }
 
 // GET /passports — list all
-router.get("/passports", async (req, res): Promise<void> => {
+router.get("/passports", requirePermission("passports.read"), async (req, res): Promise<void> => {
   const parsed = ListPassportsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const { search, nationality, status, clientId } = parsed.data;
+  const { search, nationality, status, clientId, deploymentTypeId } = parsed.data;
 
   const conditions = [];
   if (nationality) {
@@ -99,8 +100,13 @@ router.get("/passports", async (req, res): Promise<void> => {
     const n = Number(clientId);
     if (!Number.isNaN(n)) conditions.push(eq(passportsTable.clientId, n));
   }
+  if (deploymentTypeId === "none") {
+    conditions.push(isNull(passportsTable.deploymentTypeId));
+  } else if (deploymentTypeId) {
+    const n = Number(deploymentTypeId);
+    if (!Number.isNaN(n)) conditions.push(eq(passportsTable.deploymentTypeId, n));
+  }
 
-  // Left-join clients so each row carries clientName for display.
   const results = await db
     .select({
       id: passportsTable.id,
@@ -116,6 +122,8 @@ router.get("/passports", async (req, res): Promise<void> => {
       originalFilename: passportsTable.originalFilename,
       clientId: passportsTable.clientId,
       clientName: clientsTable.name,
+      deploymentTypeId: passportsTable.deploymentTypeId,
+      deploymentTypeName: deploymentTypesTable.name,
       workPermitNumber: passportsTable.workPermitNumber,
       agent: passportsTable.agent,
       createdAt: passportsTable.createdAt,
@@ -123,6 +131,7 @@ router.get("/passports", async (req, res): Promise<void> => {
     })
     .from(passportsTable)
     .leftJoin(clientsTable, eq(passportsTable.clientId, clientsTable.id))
+    .leftJoin(deploymentTypesTable, eq(passportsTable.deploymentTypeId, deploymentTypesTable.id))
     .where(conditions.length > 0 ? sql`${conditions.reduce((a, b) => sql`${a} AND ${b}`)}` : undefined)
     .orderBy(desc(passportsTable.createdAt));
 
@@ -143,7 +152,7 @@ router.get("/passports", async (req, res): Promise<void> => {
 });
 
 // POST /passports/upload — upload and extract
-router.post("/passports/upload", upload.single("file"), async (req, res): Promise<void> => {
+router.post("/passports/upload", requirePermission("passports.write"), upload.single("file"), async (req, res): Promise<void> => {
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
@@ -191,7 +200,7 @@ router.post("/passports/upload", upload.single("file"), async (req, res): Promis
 });
 
 // GET /passports/stats — dashboard stats
-router.get("/passports/stats", async (_req, res): Promise<void> => {
+router.get("/passports/stats", requirePermission("dashboard.read"), async (_req, res): Promise<void> => {
   const all = await db.select().from(passportsTable).orderBy(desc(passportsTable.createdAt));
 
   const stats = {
@@ -208,7 +217,7 @@ router.get("/passports/stats", async (_req, res): Promise<void> => {
 });
 
 // GET /passports/:id — get single
-router.get("/passports/:id", async (req, res): Promise<void> => {
+router.get("/passports/:id", requirePermission("passports.read"), async (req, res): Promise<void> => {
   const params = GetPassportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -229,7 +238,7 @@ router.get("/passports/:id", async (req, res): Promise<void> => {
 });
 
 // PATCH /passports/:id — update
-router.patch("/passports/:id", async (req, res): Promise<void> => {
+router.patch("/passports/:id", requirePermission("passports.write"), async (req, res): Promise<void> => {
   const params = UpdatePassportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -269,7 +278,7 @@ router.patch("/passports/:id", async (req, res): Promise<void> => {
 });
 
 // DELETE /passports/:id — delete
-router.delete("/passports/:id", async (req, res): Promise<void> => {
+router.delete("/passports/:id", requirePermission("passports.delete"), async (req, res): Promise<void> => {
   const params = GetPassportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

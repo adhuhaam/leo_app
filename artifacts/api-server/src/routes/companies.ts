@@ -7,6 +7,7 @@ import {
   UpdateCompanyBody,
   DeleteCompanyParams,
 } from "@workspace/api-zod";
+import { requirePermission } from "../lib/rbac";
 
 const router: IRouter = Router();
 
@@ -34,7 +35,7 @@ function validateImageDataUrl(value: unknown, label: string): string | null {
   return null;
 }
 
-router.get("/companies", async (req, res): Promise<void> => {
+router.get("/companies", requirePermission("companies.read"), async (req, res): Promise<void> => {
   const withBranding = req.query.withBranding === "true";
   // Default list omits the heavy base64 image fields. Set ?withBranding=true on
   // the Settings page to retrieve them. This keeps the LOA form / dashboard fast.
@@ -65,7 +66,7 @@ router.get("/companies", async (req, res): Promise<void> => {
   res.json(out);
 });
 
-router.post("/companies", async (req, res): Promise<void> => {
+router.post("/companies", requirePermission("companies.write"), async (req, res): Promise<void> => {
   const parsed = CreateCompanyBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -81,7 +82,7 @@ router.post("/companies", async (req, res): Promise<void> => {
   res.status(201).json(company);
 });
 
-router.patch("/companies/:id", async (req, res): Promise<void> => {
+router.patch("/companies/:id", requirePermission("companies.write"), async (req, res): Promise<void> => {
   const params = UpdateCompanyParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -110,7 +111,7 @@ router.patch("/companies/:id", async (req, res): Promise<void> => {
   res.json(company);
 });
 
-router.delete("/companies/:id", async (req, res): Promise<void> => {
+router.delete("/companies/:id", requirePermission("companies.delete"), async (req, res): Promise<void> => {
   const params = DeleteCompanyParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

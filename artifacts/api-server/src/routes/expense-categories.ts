@@ -7,10 +7,11 @@ import {
   UpdateExpenseCategoryBody,
   DeleteExpenseCategoryParams,
 } from "@workspace/api-zod";
+import { requirePermission } from "../lib/rbac";
 
 const router: IRouter = Router();
 
-router.get("/expense-categories", async (_req, res): Promise<void> => {
+router.get("/expense-categories", requirePermission("expenses.read"), async (_req, res): Promise<void> => {
   const rows = await db
     .select()
     .from(expenseCategoriesTable)
@@ -18,7 +19,7 @@ router.get("/expense-categories", async (_req, res): Promise<void> => {
   res.json(rows);
 });
 
-router.post("/expense-categories", async (req, res): Promise<void> => {
+router.post("/expense-categories", requirePermission("expenses.write"), async (req, res): Promise<void> => {
   const parsed = CreateExpenseCategoryBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -55,7 +56,7 @@ router.post("/expense-categories", async (req, res): Promise<void> => {
   res.status(201).json(row);
 });
 
-router.patch("/expense-categories/:id", async (req, res): Promise<void> => {
+router.patch("/expense-categories/:id", requirePermission("expenses.write"), async (req, res): Promise<void> => {
   const params = UpdateExpenseCategoryParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -107,7 +108,7 @@ router.patch("/expense-categories/:id", async (req, res): Promise<void> => {
   res.json(row);
 });
 
-router.delete("/expense-categories/:id", async (req, res): Promise<void> => {
+router.delete("/expense-categories/:id", requirePermission("expenses.delete"), async (req, res): Promise<void> => {
   const params = DeleteExpenseCategoryParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

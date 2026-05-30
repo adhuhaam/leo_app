@@ -1,136 +1,105 @@
-import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { scrypt as scryptCb, randomBytes, timingSafeEqual } from "node:crypto";
-import { promisify } from "node:util";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { eq } from "drizzle-orm";
-import { db, appSettingsTable } from "@workspace/db";
-import { LoginBody, ChangePasswordBody } from "@workspace/api-zod";
-
-const scrypt = promisify(scryptCb) as (
-  password: string,
-  salt: Buffer,
-  keylen: number,
-) => Promise<Buffer>;
-
-const APP_PASSWORD = process.env["APP_PASSWORD"];
-if (!APP_PASSWORD) {
-  throw new Error("APP_PASSWORD environment variable is required for authentication");
-}
+import { db, usersTable, userRolesTable, rolesTable } from "@workspace/db";
+import { requireAuth } from "../lib/auth";
+import { requirePermission } from "../lib/rbac";
 
 const router: IRouter = Router();
 
-// Format: scrypt$<salt-hex>$<key-hex>
-async function hashPassword(plain: string): Promise<string> {
-  const salt = randomBytes(16);
-  const key = await scrypt(plain, salt, 64);
-  return `scrypt$${salt.toString("hex")}$${key.toString("hex")}`;
-}
-
-async function verifyPasswordHash(plain: string, stored: string): Promise<boolean> {
-  const parts = stored.split("$");
-  if (parts.length !== 3 || parts[0] !== "scrypt") return false;
-  const salt = Buffer.from(parts[1], "hex");
-  const expected = Buffer.from(parts[2], "hex");
-  const actual = await scrypt(plain, salt, expected.length);
-  if (actual.length !== expected.length) return false;
-  return timingSafeEqual(actual, expected);
-}
-
-// Look up the override hash if one has been set; otherwise fall back to the
-// APP_PASSWORD env var (used for fresh installs).
-async function checkPassword(plain: string): Promise<boolean> {
-  const rows = await db
-    .select({ hash: appSettingsTable.passwordHash })
-    .from(appSettingsTable)
-    .where(eq(appSettingsTable.id, 1))
-    .limit(1);
-  const stored = rows[0]?.hash;
-  if (stored) return verifyPasswordHash(plain, stored);
-  return plain === APP_PASSWORD;
-}
-
-router.get("/auth/me", (req, res) => {
-  res.json({ authenticated: Boolean(req.session?.authenticated) });
-});
-
-router.post("/auth/login", async (req, res): Promise<void> => {
-  const parsed = LoginBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(401).json({ error: "Invalid password" });
-    return;
-  }
-  const ok = await checkPassword(parsed.data.password);
-  if (!ok) {
-    req.log.warn({ ip: req.ip }, "Failed login attempt");
-    res.status(401).json({ error: "Invalid password" });
-    return;
-  }
-  // Regenerate the session ID on successful login to defeat session fixation:
-  // any pre-existing SID an attacker may have planted is discarded and a fresh
-  // one is issued before we mark the session as authenticated.
-  req.session.regenerate((regenErr) => {
-    if (regenErr) {
-      req.log.error({ err: regenErr }, "Failed to regenerate session");
-      res.status(500).json({ error: "Failed to log in" });
-      return;
-    }
-    req.session.authenticated = true;
-    req.session.save((saveErr) => {
-      if (saveErr) {
-        req.log.error({ err: saveErr }, "Failed to save session");
-        res.status(500).json({ error: "Failed to log in" });
-        return;
-      }
-      res.sendStatus(204);
-    });
+router.get("/auth/me", requireAuth, (req: Request, res: Response) => {
+  const user = req.user!;
+  res.json({
+    authenticated: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      roles: user.roles,
+      permissions: user.permissions,
+    },
   });
 });
-
-router.post("/auth/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      req.log.error({ err }, "Failed to destroy session");
-    }
-    res.clearCookie("leo.sid");
-    res.sendStatus(204);
-  });
-});
-
-router.post("/auth/change-password", async (req, res): Promise<void> => {
-  if (!req.session?.authenticated) {
-    res.status(401).json({ error: "Authentication required" });
-    return;
-  }
-  const parsed = ChangePasswordBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-  const { currentPassword, newPassword } = parsed.data;
-  const ok = await checkPassword(currentPassword);
-  if (!ok) {
-    res.status(401).json({ error: "Current password is incorrect" });
-    return;
-  }
-  const hash = await hashPassword(newPassword);
-  // Make sure the singleton row exists, then update the hash.
-  await db.insert(appSettingsTable).values({ id: 1 }).onConflictDoNothing();
-  await db
-    .update(appSettingsTable)
-    .set({ passwordHash: hash })
-    .where(eq(appSettingsTable.id, 1));
-  res.sendStatus(204);
-});
-
-/**
- * Middleware that gates protected API routes. Returns 401 (not 302) so the
- * SPA can decide where to redirect.
- */
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  if (req.session?.authenticated) {
-    next();
-    return;
-  }
-  res.status(401).json({ error: "Authentication required" });
-}
 
 export default router;
+
+/** User management routes — mounted separately with auth */
+export const usersRouter: IRouter = Router();
+
+usersRouter.get("/users", requireAuth, requirePermission("users.read"), async (_req, res) => {
+  const rows = await db
+    .select({
+      id: usersTable.id,
+      email: usersTable.email,
+      fullName: usersTable.fullName,
+      isActive: usersTable.isActive,
+      createdAt: usersTable.createdAt,
+    })
+    .from(usersTable)
+    .orderBy(usersTable.email);
+
+  const usersWithRoles = await Promise.all(
+    rows.map(async (u) => {
+      const roleRows = await db
+        .select({ slug: rolesTable.slug, name: rolesTable.name })
+        .from(userRolesTable)
+        .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
+        .where(eq(userRolesTable.userId, u.id));
+      return { ...u, roles: roleRows };
+    }),
+  );
+
+  res.json(usersWithRoles);
+});
+
+usersRouter.get("/roles", requireAuth, requirePermission("users.read"), async (_req, res) => {
+  const roles = await db.select().from(rolesTable).orderBy(rolesTable.name);
+  res.json(roles);
+});
+
+usersRouter.patch(
+  "/users/:id/roles",
+  requireAuth,
+  requirePermission("users.admin"),
+  async (req, res): Promise<void> => {
+    const userId = String(req.params.id);
+    const roleSlugs = req.body?.roleSlugs as string[] | undefined;
+    if (!Array.isArray(roleSlugs)) {
+      res.status(400).json({ error: "roleSlugs array required" });
+      return;
+    }
+
+    const roles = await db.select().from(rolesTable);
+    const roleIds = roles.filter((r) => roleSlugs.includes(r.slug)).map((r) => r.id);
+
+    await db.delete(userRolesTable).where(eq(userRolesTable.userId, userId));
+    for (const roleId of roleIds) {
+      await db.insert(userRolesTable).values({ userId, roleId }).onConflictDoNothing();
+    }
+
+    res.sendStatus(204);
+  },
+);
+
+usersRouter.patch(
+  "/users/:id",
+  requireAuth,
+  requirePermission("users.admin"),
+  async (req, res): Promise<void> => {
+    const userId = String(req.params.id);
+    const { fullName, isActive } = req.body ?? {};
+
+    const updates: Partial<{ fullName: string; isActive: boolean }> = {};
+    if (typeof fullName === "string") updates.fullName = fullName;
+    if (typeof isActive === "boolean") updates.isActive = isActive;
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ error: "No valid fields to update" });
+      return;
+    }
+
+    await db.update(usersTable).set(updates).where(eq(usersTable.id, userId));
+    res.sendStatus(204);
+  },
+);
+
+export { requireAuth };

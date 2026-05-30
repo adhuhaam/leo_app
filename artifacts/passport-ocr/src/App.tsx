@@ -15,6 +15,8 @@ import ExpensesPage from "@/pages/expenses";
 import BillingPage from "@/pages/billing";
 import BillingPrintPage from "@/pages/billing-print";
 import SettingsPage from "@/pages/settings";
+import UsersPage from "@/pages/users";
+import { AuthProvider } from "@/context/auth";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,7 @@ function Router() {
           <Route path="/billing" component={BillingPage} />
           <Route path="/billing/:id/print" component={BillingPrintPage} />
           <Route path="/settings" component={SettingsPage} />
+          <Route path="/users" component={UsersPage} />
           <Route component={NotFound} />
         </Switch>
       </AppLayout>
@@ -46,12 +49,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

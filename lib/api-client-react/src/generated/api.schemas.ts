@@ -9,19 +9,78 @@ export interface HealthStatus {
   status: string;
 }
 
-export interface LoginInput {
-  /** @minLength 1 */
-  password: string;
+export interface AuthUser {
+  id: string;
+  email: string;
+  /** @nullable */
+  fullName?: string | null;
+  roles: string[];
+  permissions: string[];
 }
 
-export interface ChangePasswordInput {
-  /** @minLength 1 */
-  currentPassword: string;
-  /**
-   * @minLength 6
-   * @maxLength 200
-   */
-  newPassword: string;
+export interface AuthStatus {
+  authenticated: boolean;
+  user: AuthUser;
+}
+
+export interface Role {
+  id: number;
+  slug: string;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+}
+
+export type AppUserRolesItem = {
+  slug: string;
+  name: string;
+};
+
+export interface AppUser {
+  id: string;
+  email: string;
+  /** @nullable */
+  fullName?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  roles: AppUserRolesItem[];
+}
+
+export interface UserUpdateInput {
+  fullName?: string;
+  isActive?: boolean;
+}
+
+export interface UserRolesInput {
+  roleSlugs: string[];
+}
+
+export interface DeploymentType {
+  id: number;
+  slug: string;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+}
+
+export type BillingStatsByDeploymentTypeItem = {
+  /** @nullable */
+  deploymentTypeId?: number | null;
+  /** @nullable */
+  deploymentTypeName?: string | null;
+  count?: number;
+  revenue?: string;
+};
+
+export interface BillingStats {
+  totalInvoices: number;
+  totalQuotations: number;
+  draft: number;
+  sent: number;
+  paid: number;
+  void: number;
+  totalRevenue: string;
+  byDeploymentType?: BillingStatsByDeploymentTypeItem[];
 }
 
 export interface SystemSettings {
@@ -247,6 +306,16 @@ export interface Passport {
   workPermitNumber?: string | null;
   /** @nullable */
   agent?: string | null;
+  /**
+   * Deployment category (recruitment, casual worker, etc.)
+   * @nullable
+   */
+  deploymentTypeId?: number | null;
+  /**
+   * Joined deployment type name for display
+   * @nullable
+   */
+  deploymentTypeName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -269,6 +338,8 @@ export interface PassportUpdate {
   workPermitNumber?: string | null;
   /** @nullable */
   agent?: string | null;
+  /** @nullable */
+  deploymentTypeId?: number | null;
 }
 
 export interface PassportStats {
@@ -489,6 +560,8 @@ export interface BillingDocumentSummary {
   /** @nullable */
   notes?: string | null;
   status: string;
+  /** @nullable */
+  deploymentTypeId?: number | null;
   subtotal: string;
   createdAt: string;
   updatedAt: string;
@@ -540,6 +613,8 @@ export interface BillingDocumentInput {
   gstInclusive?: boolean;
   notes?: string;
   status?: string;
+  /** @nullable */
+  deploymentTypeId?: number | null;
   /** @minItems 1 */
   items: BillingItemInput[];
 }
@@ -562,6 +637,8 @@ export interface BillingDocumentUpdate {
   /** @nullable */
   notes?: string | null;
   status?: string;
+  /** @nullable */
+  deploymentTypeId?: number | null;
   /** @minItems 1 */
   items?: BillingItemInput[];
 }
@@ -569,10 +646,6 @@ export interface BillingDocumentUpdate {
 export interface BillingDocumentCreated {
   id: number;
 }
-
-export type GetAuthStatus200 = {
-  authenticated: boolean;
-};
 
 export type ListPassportsParams = {
   search?: string;
@@ -582,6 +655,10 @@ export type ListPassportsParams = {
    * Filter by allocated client. Pass `none` for unallocated candidates.
    */
   clientId?: string;
+  /**
+   * Filter by deployment type (recruitment, casual, etc.)
+   */
+  deploymentTypeId?: string;
 };
 
 export type ListCompaniesParams = {
@@ -603,6 +680,7 @@ export type ListExpensesParams = {
 export type ListBillingDocumentsParams = {
   kind?: ListBillingDocumentsKind;
   search?: string;
+  deploymentTypeId?: number;
 };
 
 export type ListBillingDocumentsKind =

@@ -1,3 +1,4 @@
+import "../env/load-env.ts";
 import { defineConfig } from "drizzle-kit";
 import path from "path";
 

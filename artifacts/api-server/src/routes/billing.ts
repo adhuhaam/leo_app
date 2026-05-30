@@ -5,6 +5,7 @@ import {
   billingDocumentsTable,
   billingItemsTable,
   companiesTable,
+  deploymentTypesTable,
 } from "@workspace/db";
 import {
   CreateBillingDocumentBody,
@@ -14,6 +15,7 @@ import {
   GetBillingDocumentParams,
   ListBillingDocumentsQueryParams,
 } from "@workspace/api-zod";
+import { requirePermission } from "../lib/rbac";
 
 const router: IRouter = Router();
 
@@ -100,15 +102,69 @@ async function allocateNumber(kind: "invoice" | "quotation", tx: Tx): Promise<st
   return `${prefix}${pad(max + 1)}`;
 }
 
-router.get("/billing/documents", async (req, res): Promise<void> => {
+router.get("/billing/stats", requirePermission("billing.read"), async (_req, res): Promise<void> => {
+  const docs = await db.select().from(billingDocumentsTable);
+  const items = await db
+    .select({
+      documentId: billingItemsTable.documentId,
+      total: sql<string>`COALESCE(SUM(${billingItemsTable.amount}), 0)::text`,
+    })
+    .from(billingItemsTable)
+    .groupBy(billingItemsTable.documentId);
+
+  const totalsMap = new Map(items.map((i) => [i.documentId, Number(i.total)]));
+
+  let totalRevenue = 0;
+  const byStatus = { draft: 0, sent: 0, paid: 0, void: 0 };
+  let totalInvoices = 0;
+  let totalQuotations = 0;
+
+  const byDeployment = new Map<number | null, { count: number; revenue: number; name: string | null }>();
+
+  for (const doc of docs) {
+    if (doc.kind === "invoice") totalInvoices++;
+    else totalQuotations++;
+    const st = doc.status as keyof typeof byStatus;
+    if (st in byStatus) byStatus[st]++;
+    const rev = totalsMap.get(doc.id) ?? 0;
+    if (doc.kind === "invoice" && doc.status === "paid") totalRevenue += rev;
+
+    const key = doc.deploymentTypeId ?? null;
+    const entry = byDeployment.get(key) ?? { count: 0, revenue: 0, name: null };
+    entry.count++;
+    if (doc.kind === "invoice" && doc.status === "paid") entry.revenue += rev;
+    byDeployment.set(key, entry);
+  }
+
+  const deploymentTypes = await db.select().from(deploymentTypesTable);
+  const typeName = new Map(deploymentTypes.map((t) => [t.id, t.name]));
+
+  res.json({
+    totalInvoices,
+    totalQuotations,
+    ...byStatus,
+    totalRevenue: totalRevenue.toFixed(2),
+    byDeploymentType: [...byDeployment.entries()].map(([id, v]) => ({
+      deploymentTypeId: id,
+      deploymentTypeName: id != null ? typeName.get(id) ?? null : null,
+      count: v.count,
+      revenue: v.revenue.toFixed(2),
+    })),
+  });
+});
+
+router.get("/billing/documents", requirePermission("billing.read"), async (req, res): Promise<void> => {
   const parsed = ListBillingDocumentsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { kind, search } = parsed.data;
+  const { kind, search, deploymentTypeId } = parsed.data;
   const conds: SQL[] = [];
   if (kind) conds.push(eq(billingDocumentsTable.kind, kind));
+  if (deploymentTypeId != null) {
+    conds.push(eq(billingDocumentsTable.deploymentTypeId, deploymentTypeId));
+  }
   const where = conds.length ? and(...conds) : undefined;
 
   const rows = await db
@@ -128,6 +184,7 @@ router.get("/billing/documents", async (req, res): Promise<void> => {
       gstInclusive: billingDocumentsTable.gstInclusive,
       notes: billingDocumentsTable.notes,
       status: billingDocumentsTable.status,
+      deploymentTypeId: billingDocumentsTable.deploymentTypeId,
       createdAt: billingDocumentsTable.createdAt,
       updatedAt: billingDocumentsTable.updatedAt,
     })
@@ -168,7 +225,7 @@ router.get("/billing/documents", async (req, res): Promise<void> => {
   res.json(filtered);
 });
 
-router.get("/billing/documents/:id", async (req, res): Promise<void> => {
+router.get("/billing/documents/:id", requirePermission("billing.read"), async (req, res): Promise<void> => {
   const parsed = GetBillingDocumentParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -192,6 +249,7 @@ router.get("/billing/documents/:id", async (req, res): Promise<void> => {
       gstInclusive: billingDocumentsTable.gstInclusive,
       notes: billingDocumentsTable.notes,
       status: billingDocumentsTable.status,
+      deploymentTypeId: billingDocumentsTable.deploymentTypeId,
       createdAt: billingDocumentsTable.createdAt,
       updatedAt: billingDocumentsTable.updatedAt,
     })
@@ -211,7 +269,7 @@ router.get("/billing/documents/:id", async (req, res): Promise<void> => {
   res.json({ ...docRows[0], items });
 });
 
-router.post("/billing/documents", async (req, res): Promise<void> => {
+router.post("/billing/documents", requirePermission("billing.write"), async (req, res): Promise<void> => {
   const parsed = CreateBillingDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -294,6 +352,7 @@ router.post("/billing/documents", async (req, res): Promise<void> => {
             gstInclusive: data.gstInclusive ?? true,
             notes: data.notes?.trim() || null,
             status: data.status ?? "draft",
+            deploymentTypeId: data.deploymentTypeId ?? null,
           })
           .returning();
         const doc = inserted[0];
@@ -319,7 +378,7 @@ router.post("/billing/documents", async (req, res): Promise<void> => {
   res.status(500).json({ error: "Failed to create document" });
 });
 
-router.patch("/billing/documents/:id", async (req, res): Promise<void> => {
+router.patch("/billing/documents/:id", requirePermission("billing.write"), async (req, res): Promise<void> => {
   const paramsParsed = UpdateBillingDocumentParams.safeParse(req.params);
   if (!paramsParsed.success) {
     res.status(400).json({ error: paramsParsed.error.message });
@@ -368,8 +427,7 @@ router.patch("/billing/documents/:id", async (req, res): Promise<void> => {
   if (data.gstInclusive !== undefined) patch.gstInclusive = data.gstInclusive;
   if (data.notes !== undefined) patch.notes = data.notes?.trim() || null;
   if (data.status !== undefined) patch.status = data.status;
-
-  // Validate replacement items if provided
+  if (data.deploymentTypeId !== undefined) patch.deploymentTypeId = data.deploymentTypeId;
   let normalizedItems: { position: number; description: string; detail: string | null; qty: string; rate: string; amount: string }[] | null = null;
   if (data.items !== undefined) {
     if (!Array.isArray(data.items) || data.items.length === 0) {
@@ -440,7 +498,7 @@ router.patch("/billing/documents/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/billing/documents/:id", async (req, res): Promise<void> => {
+router.delete("/billing/documents/:id", requirePermission("billing.delete"), async (req, res): Promise<void> => {
   const parsed = DeleteBillingDocumentParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

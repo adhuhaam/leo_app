@@ -16,34 +16,83 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary Returns current auth status
+ * @summary Returns current authenticated user with roles and permissions
  */
 export const GetAuthStatusResponse = zod.object({
   authenticated: zod.boolean(),
+  user: zod.object({
+    id: zod.string().uuid(),
+    email: zod.string(),
+    fullName: zod.string().nullish(),
+    roles: zod.array(zod.string()),
+    permissions: zod.array(zod.string()),
+  }),
 });
 
 /**
- * @summary Log in with the shared password
+ * @summary List all users with roles
  */
+export const ListUsersResponseItem = zod.object({
+  id: zod.string().uuid(),
+  email: zod.string(),
+  fullName: zod.string().nullish(),
+  isActive: zod.boolean(),
+  createdAt: zod.string(),
+  roles: zod.array(
+    zod.object({
+      slug: zod.string(),
+      name: zod.string(),
+    }),
+  ),
+});
+export const ListUsersResponse = zod.array(ListUsersResponseItem);
 
-export const LoginBody = zod.object({
-  password: zod.string().min(1),
+/**
+ * @summary List available roles
+ */
+export const ListRolesResponseItem = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+});
+export const ListRolesResponse = zod.array(ListRolesResponseItem);
+
+/**
+ * @summary Update user profile or active status
+ */
+export const UpdateUserParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const UpdateUserBody = zod.object({
+  fullName: zod.string().optional(),
+  isActive: zod.boolean().optional(),
 });
 
 /**
- * @summary Update the application password
+ * @summary Assign roles to a user
  */
-
-export const changePasswordBodyNewPasswordMin = 6;
-export const changePasswordBodyNewPasswordMax = 200;
-
-export const ChangePasswordBody = zod.object({
-  currentPassword: zod.string().min(1),
-  newPassword: zod
-    .string()
-    .min(changePasswordBodyNewPasswordMin)
-    .max(changePasswordBodyNewPasswordMax),
+export const UpdateUserRolesParams = zod.object({
+  id: zod.coerce.string().uuid(),
 });
+
+export const UpdateUserRolesBody = zod.object({
+  roleSlugs: zod.array(zod.string()),
+});
+
+/**
+ * @summary List deployment type categories
+ */
+export const ListDeploymentTypesResponseItem = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+});
+export const ListDeploymentTypesResponse = zod.array(
+  ListDeploymentTypesResponseItem,
+);
 
 /**
  * @summary Read tenant system settings (app name, theme)
@@ -171,6 +220,10 @@ export const ListPassportsQueryParams = zod.object({
     .describe(
       "Filter by allocated client. Pass `none` for unallocated candidates.",
     ),
+  deploymentTypeId: zod.coerce
+    .string()
+    .optional()
+    .describe("Filter by deployment type (recruitment, casual, etc.)"),
 });
 
 export const ListPassportsResponseItem = zod.object({
@@ -195,6 +248,14 @@ export const ListPassportsResponseItem = zod.object({
     .describe("Joined client name for display (computed; ignored on writes)."),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
+  deploymentTypeId: zod
+    .number()
+    .nullish()
+    .describe("Deployment category (recruitment, casual worker, etc.)"),
+  deploymentTypeName: zod
+    .string()
+    .nullish()
+    .describe("Joined deployment type name for display"),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -242,6 +303,14 @@ export const GetPassportStatsResponse = zod.object({
         ),
       workPermitNumber: zod.string().nullish(),
       agent: zod.string().nullish(),
+      deploymentTypeId: zod
+        .number()
+        .nullish()
+        .describe("Deployment category (recruitment, casual worker, etc.)"),
+      deploymentTypeName: zod
+        .string()
+        .nullish()
+        .describe("Joined deployment type name for display"),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -277,6 +346,14 @@ export const GetPassportResponse = zod.object({
     .describe("Joined client name for display (computed; ignored on writes)."),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
+  deploymentTypeId: zod
+    .number()
+    .nullish()
+    .describe("Deployment category (recruitment, casual worker, etc.)"),
+  deploymentTypeName: zod
+    .string()
+    .nullish()
+    .describe("Joined deployment type name for display"),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -299,6 +376,7 @@ export const UpdatePassportBody = zod.object({
   clientId: zod.number().nullish(),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
+  deploymentTypeId: zod.number().nullish(),
 });
 
 export const UpdatePassportResponse = zod.object({
@@ -323,6 +401,14 @@ export const UpdatePassportResponse = zod.object({
     .describe("Joined client name for display (computed; ignored on writes)."),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
+  deploymentTypeId: zod
+    .number()
+    .nullish()
+    .describe("Deployment category (recruitment, casual worker, etc.)"),
+  deploymentTypeName: zod
+    .string()
+    .nullish()
+    .describe("Joined deployment type name for display"),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -811,11 +897,35 @@ export const DeleteExpenseParams = zod.object({
 });
 
 /**
+ * @summary Billing summary stats by status and deployment type
+ */
+export const GetBillingStatsResponse = zod.object({
+  totalInvoices: zod.number(),
+  totalQuotations: zod.number(),
+  draft: zod.number(),
+  sent: zod.number(),
+  paid: zod.number(),
+  void: zod.number(),
+  totalRevenue: zod.string(),
+  byDeploymentType: zod
+    .array(
+      zod.object({
+        deploymentTypeId: zod.number().nullish(),
+        deploymentTypeName: zod.string().nullish(),
+        count: zod.number().optional(),
+        revenue: zod.string().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
  * @summary List invoices and quotations
  */
 export const ListBillingDocumentsQueryParams = zod.object({
   kind: zod.enum(["invoice", "quotation"]).optional(),
   search: zod.coerce.string().optional(),
+  deploymentTypeId: zod.coerce.number().optional(),
 });
 
 export const ListBillingDocumentsResponseItem = zod.object({
@@ -834,6 +944,7 @@ export const ListBillingDocumentsResponseItem = zod.object({
   gstInclusive: zod.boolean(),
   notes: zod.string().nullish(),
   status: zod.string(),
+  deploymentTypeId: zod.number().nullish(),
   subtotal: zod.string(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -859,6 +970,7 @@ export const CreateBillingDocumentBody = zod.object({
   gstInclusive: zod.boolean().optional(),
   notes: zod.string().optional(),
   status: zod.string().optional(),
+  deploymentTypeId: zod.number().nullish(),
   items: zod
     .array(
       zod.object({
@@ -895,6 +1007,7 @@ export const GetBillingDocumentResponse = zod
     gstInclusive: zod.boolean(),
     notes: zod.string().nullish(),
     status: zod.string(),
+    deploymentTypeId: zod.number().nullish(),
     subtotal: zod.string(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
@@ -935,6 +1048,7 @@ export const UpdateBillingDocumentBody = zod.object({
   gstInclusive: zod.boolean().optional(),
   notes: zod.string().nullish(),
   status: zod.string().optional(),
+  deploymentTypeId: zod.number().nullish(),
   items: zod
     .array(
       zod.object({

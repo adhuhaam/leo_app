@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: leo-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && pnpm --filter @workspace/api-server run build
+    startCommand: pnpm --filter @workspace/api-server run start
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8080"
+      - key: DEV_AUTH
+        value: "false"
+      - key: SUPABASE_URL
+        value: https://tdrzgemsyymsakigbazn.supabase.co
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

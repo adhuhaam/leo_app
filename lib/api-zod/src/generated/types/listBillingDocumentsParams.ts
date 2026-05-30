@@ -10,4 +10,5 @@ import type { ListBillingDocumentsKind } from "./listBillingDocumentsKind";
 export type ListBillingDocumentsParams = {
   kind?: ListBillingDocumentsKind;
   search?: string;
+  deploymentTypeId?: number;
 };

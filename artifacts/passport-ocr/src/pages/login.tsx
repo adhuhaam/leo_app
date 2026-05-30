@@ -1,33 +1,30 @@
 import { useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
-import { login } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Lock } from "lucide-react";
 import leoLogo from "@assets/image_1778408412841.png";
+import { useAuth, DEV_AUTH } from "@/context/auth";
 
 export default function LoginPage() {
   const [, navigate] = useLocation();
-  const qc = useQueryClient();
+  const { signIn } = useAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!password) return;
+    if (!email || !password) return;
     setLoading(true);
     setError(null);
     try {
-      await login({ password });
-      // Refresh auth status so AuthGate stops rendering the login page.
-      await qc.invalidateQueries({ queryKey: ["/auth/me"] });
+      await signIn(email.trim(), password);
       navigate("/");
-    } catch (err) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      setError(status === 401 ? "Incorrect password. Try again." : "Login failed. Please try again.");
+    } catch {
+      setError("Invalid email or password. Try again.");
     } finally {
       setLoading(false);
     }
@@ -36,7 +33,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full bg-app-shell flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        {/* Brand panel */}
         <div className="px-6 py-2 mb-6 flex items-center justify-center">
           <img
             src={leoLogo}
@@ -52,11 +48,32 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight">Sign in</h1>
-              <p className="text-xs text-muted-foreground">Enter the access password to continue.</p>
+              <p className="text-xs text-muted-foreground">
+                {DEV_AUTH
+                  ? "Local dev mode — use admin@local.dev / leo123 (see .env)"
+                  : "Use your staff account to continue."}
+              </p>
             </div>
           </div>
 
           <form onSubmit={onSubmit} className="mt-6 space-y-4" data-testid="form-login">
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                autoFocus
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                disabled={loading}
+                data-testid="input-email"
+              />
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Password
@@ -64,7 +81,6 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                autoFocus
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -86,7 +102,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={loading || !password}
+              disabled={loading || !email || !password}
               data-testid="button-submit-login"
             >
               {loading ? (

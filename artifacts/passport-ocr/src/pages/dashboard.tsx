@@ -26,12 +26,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Link } from "wouter";
+import { useAuth } from "@/context/auth";
 
 function formatMVR(n: number): string {
   return `MVR ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default function Dashboard() {
+  const { hasPermission, user } = useAuth();
+  const canPassports = hasPermission("passports.read");
+  const canExpenses = hasPermission("expenses.read");
+  const canCompanies = hasPermission("companies.read");
+  const canBilling = hasPermission("billing.read");
+  const canLoaWrite = hasPermission("loa.write");
+  const canPassportWrite = hasPermission("passports.write");
+  const canUsers = hasPermission("users.read");
+
   const { data: stats, isLoading } = useGetPassportStats();
   const { data: expenses = [] } = useListExpenses();
   const { data: expenseCategories = [] } = useListExpenseCategories();
@@ -99,21 +109,32 @@ export default function Dashboard() {
               </span>
             </h1>
             <p className="text-muted-foreground text-sm md:text-base max-w-xl">
-              Your operational hub for passport extraction, Letter of Appointment generation,
-              and expense tracking — all in one place.
+              Signed in as {user?.fullName ?? user?.email}
+              {user?.roles?.length ? ` · ${user.roles.join(", ")}` : ""}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/upload">
-              <Button data-testid="button-quick-upload" className="shadow-sm gap-2">
-                <UploadCloud className="h-4 w-4" /> New Document
-              </Button>
-            </Link>
-            <Link href="/loa">
-              <Button variant="outline" className="gap-2 backdrop-blur-sm bg-background/60">
-                <FileSignature className="h-4 w-4" /> New LOA
-              </Button>
-            </Link>
+            {canPassportWrite && (
+              <Link href="/upload">
+                <Button data-testid="button-quick-upload" className="shadow-sm gap-2">
+                  <UploadCloud className="h-4 w-4" /> New Document
+                </Button>
+              </Link>
+            )}
+            {canLoaWrite && (
+              <Link href="/loa">
+                <Button variant="outline" className="gap-2 backdrop-blur-sm bg-background/60">
+                  <FileSignature className="h-4 w-4" /> New LOA
+                </Button>
+              </Link>
+            )}
+            {canUsers && (
+              <Link href="/users">
+                <Button variant="outline" className="gap-2 backdrop-blur-sm bg-background/60">
+                  <Users className="h-4 w-4" /> Users
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>

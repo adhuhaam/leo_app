@@ -8,10 +8,11 @@ import {
   DeleteClientParams,
   ListClientsQueryParams,
 } from "@workspace/api-zod";
+import { requirePermission } from "../lib/rbac";
 
 const router: IRouter = Router();
 
-router.get("/clients", async (req, res): Promise<void> => {
+router.get("/clients", requirePermission("clients.read"), async (req, res): Promise<void> => {
   const parsed = ListClientsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -33,7 +34,7 @@ router.get("/clients", async (req, res): Promise<void> => {
   res.json(filtered);
 });
 
-router.post("/clients", async (req, res): Promise<void> => {
+router.post("/clients", requirePermission("clients.write"), async (req, res): Promise<void> => {
   const parsed = CreateClientBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -51,7 +52,7 @@ router.post("/clients", async (req, res): Promise<void> => {
   res.status(201).json(row);
 });
 
-router.patch("/clients/:id", async (req, res): Promise<void> => {
+router.patch("/clients/:id", requirePermission("clients.write"), async (req, res): Promise<void> => {
   const params = UpdateClientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -83,7 +84,7 @@ router.patch("/clients/:id", async (req, res): Promise<void> => {
   res.json(row);
 });
 
-router.delete("/clients/:id", async (req, res): Promise<void> => {
+router.delete("/clients/:id", requirePermission("clients.delete"), async (req, res): Promise<void> => {
   const params = DeleteClientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

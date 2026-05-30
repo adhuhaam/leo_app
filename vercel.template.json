@@ -1,0 +1,16 @@
+{
+  "buildCommand": "node scripts/prepare-vercel.mjs && pnpm install && pnpm --filter @workspace/passport-ocr run build",
+  "outputDirectory": "artifacts/passport-ocr/dist/public",
+  "installCommand": "pnpm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://REPLACE_WITH_API_URL/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

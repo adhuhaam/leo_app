@@ -41,6 +41,8 @@ export const billingDocumentsTable = pgTable("billing_documents", {
   gstInclusive: boolean("gst_inclusive").notNull().default(true),
   notes: text("notes"),
   status: text("status").notNull().default("draft"), // draft | sent | paid | void
+  // Link to deployment type for service-line reporting (recruitment, casual, etc.)
+  deploymentTypeId: integer("deployment_type_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

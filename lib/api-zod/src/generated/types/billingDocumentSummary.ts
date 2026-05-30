@@ -28,6 +28,8 @@ export interface BillingDocumentSummary {
   /** @nullable */
   notes?: string | null;
   status: string;
+  /** @nullable */
+  deploymentTypeId?: number | null;
   subtotal: string;
   createdAt: string;
   updatedAt: string;
